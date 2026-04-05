@@ -1,77 +1,81 @@
 @import 'tailwindcss';
-@import "tw-animate-css";
-@import "shadcn-svelte/tailwind.css";
-@import "@fontsource-variable/inter";
+@import 'tw-animate-css';
+@import 'shadcn-svelte/tailwind.css';
+@import '@fontsource-variable/inter';
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * hsl() theme — html2canvas (used by liquidGL) does not parse oklch().
+ * Keep tokens here compatible with snapshots if you use liquidGL.
+ */
 :root {
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.141 0.005 285.823);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.141 0.005 285.823);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.141 0.005 285.823);
-	--primary: oklch(0.511 0.096 186.391);
-	--primary-foreground: oklch(0.984 0.014 180.72);
-	--secondary: oklch(0.967 0.001 286.375);
-	--secondary-foreground: oklch(0.21 0.006 285.885);
-	--muted: oklch(0.967 0.001 286.375);
-	--muted-foreground: oklch(0.552 0.016 285.938);
-	--accent: oklch(0.967 0.001 286.375);
-	--accent-foreground: oklch(0.21 0.006 285.885);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.92 0.004 286.32);
-	--input: oklch(0.92 0.004 286.32);
-	--ring: oklch(0.705 0.015 286.067);
-	--chart-1: oklch(0.833 0.145 321.434);
-	--chart-2: oklch(0.667 0.295 322.15);
-	--chart-3: oklch(0.591 0.293 322.896);
-	--chart-4: oklch(0.518 0.253 323.949);
-	--chart-5: oklch(0.452 0.211 324.591);
+	--background: hsl(0 0% 100%);
+	--foreground: hsl(240 6% 10%);
+	--card: hsl(0 0% 100%);
+	--card-foreground: hsl(240 6% 10%);
+	--popover: hsl(0 0% 100%);
+	--popover-foreground: hsl(240 6% 10%);
+	--primary: hsl(173 48% 42%);
+	--primary-foreground: hsl(166 76% 97%);
+	--secondary: hsl(240 5% 96%);
+	--secondary-foreground: hsl(240 6% 10%);
+	--muted: hsl(240 5% 96%);
+	--muted-foreground: hsl(240 4% 46%);
+	--accent: hsl(240 5% 96%);
+	--accent-foreground: hsl(240 6% 10%);
+	--destructive: hsl(0 72% 51%);
+	--border: hsl(240 6% 90%);
+	--input: hsl(240 6% 90%);
+	--ring: hsl(240 5% 65%);
+	--chart-1: hsl(280 55% 58%);
+	--chart-2: hsl(310 50% 52%);
+	--chart-3: hsl(320 48% 48%);
+	--chart-4: hsl(325 45% 44%);
+	--chart-5: hsl(330 42% 40%);
 	--radius: 0.625rem;
-	--sidebar: oklch(0.985 0 0);
-	--sidebar-foreground: oklch(0.141 0.005 285.823);
-	--sidebar-primary: oklch(0.6 0.118 184.704);
-	--sidebar-primary-foreground: oklch(0.984 0.014 180.72);
-	--sidebar-accent: oklch(0.967 0.001 286.375);
-	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-	--sidebar-border: oklch(0.92 0.004 286.32);
-	--sidebar-ring: oklch(0.705 0.015 286.067);
+	--sidebar: hsl(240 5% 98%);
+	--sidebar-foreground: hsl(240 6% 10%);
+	--sidebar-primary: hsl(173 48% 42%);
+	--sidebar-primary-foreground: hsl(166 76% 97%);
+	--sidebar-accent: hsl(240 5% 96%);
+	--sidebar-accent-foreground: hsl(240 6% 10%);
+	--sidebar-border: hsl(240 6% 90%);
+	--sidebar-ring: hsl(240 5% 65%);
 }
 
 .dark {
-	--background: oklch(0.141 0.005 285.823);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.21 0.006 285.885);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.21 0.006 285.885);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.437 0.078 188.216);
-	--primary-foreground: oklch(0.984 0.014 180.72);
-	--secondary: oklch(0.274 0.006 286.033);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.274 0.006 286.033);
-	--muted-foreground: oklch(0.705 0.015 286.067);
-	--accent: oklch(0.274 0.006 286.033);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.552 0.016 285.938);
-	--chart-1: oklch(0.833 0.145 321.434);
-	--chart-2: oklch(0.667 0.295 322.15);
-	--chart-3: oklch(0.591 0.293 322.896);
-	--chart-4: oklch(0.518 0.253 323.949);
-	--chart-5: oklch(0.452 0.211 324.591);
-	--sidebar: oklch(0.21 0.006 285.885);
-	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.704 0.14 182.503);
-	--sidebar-primary-foreground: oklch(0.277 0.046 192.524);
-	--sidebar-accent: oklch(0.274 0.006 286.033);
-	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.552 0.016 285.938);
+	--background: hsl(240 6% 10%);
+	--foreground: hsl(0 0% 98%);
+	--card: hsl(240 5% 14%);
+	--card-foreground: hsl(0 0% 98%);
+	--popover: hsl(240 5% 14%);
+	--popover-foreground: hsl(0 0% 98%);
+	--primary: hsl(173 40% 38%);
+	--primary-foreground: hsl(166 76% 97%);
+	--secondary: hsl(240 4% 18%);
+	--secondary-foreground: hsl(0 0% 98%);
+	--muted: hsl(240 4% 18%);
+	--muted-foreground: hsl(240 5% 65%);
+	--accent: hsl(240 4% 18%);
+	--accent-foreground: hsl(0 0% 98%);
+	--destructive: hsl(0 62% 55%);
+	--border: hsl(0 0% 100% / 0.1);
+	--input: hsl(0 0% 100% / 0.15);
+	--ring: hsl(240 5% 64%);
+	--chart-1: hsl(280 55% 58%);
+	--chart-2: hsl(310 50% 52%);
+	--chart-3: hsl(320 48% 48%);
+	--chart-4: hsl(325 45% 44%);
+	--chart-5: hsl(330 42% 40%);
+	--sidebar: hsl(240 5% 14%);
+	--sidebar-foreground: hsl(0 0% 98%);
+	--sidebar-primary: hsl(173 45% 48%);
+	--sidebar-primary-foreground: hsl(200 20% 18%);
+	--sidebar-accent: hsl(240 4% 18%);
+	--sidebar-accent-foreground: hsl(0 0% 98%);
+	--sidebar-border: hsl(0 0% 100% / 0.1);
+	--sidebar-ring: hsl(240 5% 64%);
 }
 
 @theme inline {
@@ -125,5 +129,13 @@
 	}
 	html {
 		@apply font-sans;
+	}
+
+	/*
+	 * Tailwind preflight sets ::placeholder with color-mix(in oklab, …) which
+	 * html2canvas 1.4.x cannot parse. hsl() is safe.
+	 */
+	::placeholder {
+		color: hsl(0 0% 45% / 0.85);
 	}
 }

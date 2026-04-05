@@ -35,8 +35,9 @@ const backgroundUrl = $derived(getDailyBackgroundUrl(backgroundUrls));</script>
 		isolation: isolate;
 	}
 
+	/* absolute (not fixed) so html2canvas — used by liquidGL — includes this layer; fixed nodes are skipped */
 	.bg {
-		position: fixed;
+		position: absolute;
 		inset: 0;
 		z-index: 0;
 		overflow: hidden;

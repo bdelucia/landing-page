@@ -10,6 +10,7 @@
 		side = "left",
 		variant = "sidebar",
 		collapsible = "offcanvas",
+		liquidGlass = false,
 		class: className,
 		children,
 		...restProps
@@ -17,6 +18,8 @@
 		side?: "left" | "right";
 		variant?: "sidebar" | "floating" | "inset";
 		collapsible?: "offcanvas" | "icon" | "none";
+		/** liquidGL: outer `.liquidGL` + inner `.content` per library docs */
+		liquidGlass?: boolean;
 	} = $props();
 
 	const sidebar = useSidebar();
@@ -85,6 +88,7 @@
 			data-slot="sidebar-container"
 			class={cn(
 				"fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
+				liquidGlass && "z-50",
 				side === "left"
 					? "start-0 group-data-[collapsible=offcanvas]:start-[calc(var(--sidebar-width)*-1)]"
 					: "end-0 group-data-[collapsible=offcanvas]:end-[calc(var(--sidebar-width)*-1)]",
@@ -99,9 +103,24 @@
 			<div
 				data-sidebar="sidebar"
 				data-slot="sidebar-inner"
-				class="bg-sidebar group-data-[variant=floating]:ring-sidebar-border group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 flex size-full flex-col"
+				class={cn(
+					"flex size-full flex-col group-data-[variant=floating]:rounded-2xl",
+					liquidGlass &&
+						"liquidGL menu-wrap relative z-[20] overflow-hidden bg-transparent shadow-none ring-0 group-data-[variant=floating]:border group-data-[variant=floating]:border-white/15",
+					!liquidGlass &&
+						"bg-sidebar group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border",
+					liquidGlass && "will-change-transform"
+				)}
 			>
-				{@render children?.()}
+				{#if liquidGlass}
+					<div
+						class="content relative z-[1] flex min-h-0 flex-1 flex-col p-4 !text-zinc-200 [&_svg]:text-current"
+					>
+						{@render children?.()}
+					</div>
+				{:else}
+					{@render children?.()}
+				{/if}
 			</div>
 		</div>
 	</div>

@@ -9,13 +9,13 @@
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 
-		<!-- html2canvas – DOM snapshotter (required by liquidGL) -->
+		<!-- html2canvas: required by liquidGL for snapshots (keep before liquidGL.js) -->
 		<script
 			src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
 			defer
 		></script>
-
-		<!-- liquidGL.js – liquid glass effect library -->
+		<!-- Patches oklch/oklab/color-mix in CSS before each snapshot (Tailwind v4 uses these) -->
+		<script src="/scripts/liquidgl-html2canvas-polyfill.js" defer></script>
 		<script src="/scripts/liquidGL.js" defer></script>
 	</body>
 </html>
