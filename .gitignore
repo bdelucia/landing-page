@@ -21,3 +21,6 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Cursor IDE (local state; project rules stay in tracked .cursorrules/)
+.cursor/

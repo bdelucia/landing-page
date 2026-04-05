@@ -2,7 +2,7 @@
 
 ## 1. Atomic Feature Commits
 
-- **Logical Separation:** Do not bundle unrelated changes. Separate "initialization" files (e.g., config, boilerplate, setup) from actual feature implementation.
+- **Logical Separation:** Do not bundle unrelated changes. Separate features into multiple smaller commits.
 - **Scope by Page/Component:** If working on multiple pages or features, commit them individually.
 - **Granularity:** Each commit should represent a single logical "unit of work."
 
