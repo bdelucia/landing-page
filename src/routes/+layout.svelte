@@ -29,8 +29,13 @@ const backgroundUrl = $derived(getDailyBackgroundUrl(backgroundUrls));</script>
 		min-height: 100dvh;
 	}
 
+	/*
+	 * liquidGL appends its WebGL canvas to document.body and may set z-index to maxLensZ - 1.
+	 * Keep the app above that canvas so the UI is not covered (same z-index → tree order wins).
+	 */
 	.app-shell {
 		position: relative;
+		z-index: 100;
 		min-height: 100dvh;
 		isolation: isolate;
 	}

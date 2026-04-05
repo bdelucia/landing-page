@@ -3,12 +3,9 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import {
 		Sidebar,
-		SidebarContent,
-		SidebarFooter,
 		SidebarGroup,
 		SidebarGroupContent,
 		SidebarGroupLabel,
-		SidebarHeader,
 		SidebarInset,
 		SidebarMenu,
 		SidebarMenuButton,
@@ -43,7 +40,8 @@
 		frost: 2,
 		shadow: true,
 		specular: true,
-		reveal: 'fade' as const,
+		/* not "fade": fade animates inline opacity on the lens; it can end at 0 and hide all UI text/icons */
+		reveal: 'none' as const,
 		tilt: false,
 		tiltFactor: 5,
 		magnify: 1
@@ -158,23 +156,30 @@
 			{/if}
 		</div>
 
+		<!--
+			Demo-1 / demo-4 pattern: viewport anchor (cf. .menu-anchor / .marquee-anchor).
+			Pointer-events pass through the shell; the row restores interaction. Stacking is
+			ultimately fixed by .app-shell z-index above liquidGL’s body canvas.
+		-->
 		<div
-			class="pointer-events-none fixed inset-0 z-30 flex min-h-0 min-w-0 md:pointer-events-none"
+			class="liquid-glass-anchor pointer-events-none fixed inset-0 flex min-h-0 min-w-0 md:pointer-events-none"
 		>
 			<div class="pointer-events-auto flex min-h-svh min-w-0 flex-1">
 				<Sidebar variant="floating" collapsible="icon" class="liquid-glass-sidebar" liquidGlass>
-					<SidebarHeader class="!p-0 border-b border-white/10 pb-4">
+					<div class="menu-logo-wrap border-b border-white/10 pb-4">
 						<div
 							class="flex items-center gap-3 group-data-[collapsible=icon]:justify-center"
 						>
-							<SidebarTrigger
-								class="shrink-0 text-white/80 hover:bg-white/10 hover:text-white"
-							/>
+							<span class="liquid-glass-trigger-pill shrink-0">
+								<SidebarTrigger
+									class="text-zinc-100 hover:bg-white/10 hover:text-white"
+								/>
+							</span>
 							<div
 								class="flex min-w-0 flex-1 items-center gap-3 group-data-[collapsible=icon]:hidden"
 							>
 								<div
-									class="liquidglass-logo-mark flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-sm font-bold text-white/95 shadow-sm backdrop-blur-sm"
+									class="liquidglass-logo-mark flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-sm font-bold text-white/95 shadow-sm"
 								>
 									A
 								</div>
@@ -183,59 +188,68 @@
 								>
 							</div>
 						</div>
-					</SidebarHeader>
+					</div>
 
-					<SidebarContent>
-						<SidebarGroup>
-							<SidebarGroupLabel>Navigation</SidebarGroupLabel>
-							<SidebarGroupContent>
-								<SidebarMenu>
-									{#each navItems as { label, icon: Icon }}
-										<SidebarMenuItem>
-											<SidebarMenuButton tooltipContent={label}>
-												<Icon />
-												<span>{label}</span>
-											</SidebarMenuButton>
-										</SidebarMenuItem>
-									{/each}
-								</SidebarMenu>
-							</SidebarGroupContent>
-						</SidebarGroup>
+					<div class="menu-items-wrap">
+						<div
+							class="home-menu-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-auto no-scrollbar"
+							data-sidebar="content"
+						>
+							<SidebarGroup>
+								<SidebarGroupLabel>Navigation</SidebarGroupLabel>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										{#each navItems as { label, icon: Icon }}
+											<SidebarMenuItem>
+												<SidebarMenuButton tooltipContent={label}>
+													<span class="liquid-glass-icon-pill" aria-hidden="true">
+														<Icon class="size-4 text-zinc-100" />
+													</span>
+													<span class="liquid-glass-nav-label">{label}</span>
+												</SidebarMenuButton>
+											</SidebarMenuItem>
+										{/each}
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
 
-						<SidebarGroup>
-							<SidebarGroupLabel>Support</SidebarGroupLabel>
-							<SidebarGroupContent>
-								<SidebarMenu>
-									{#each utilItems as { label, icon: Icon }}
-										<SidebarMenuItem>
-											<SidebarMenuButton tooltipContent={label}>
-												<Icon />
-												<span>{label}</span>
-											</SidebarMenuButton>
-										</SidebarMenuItem>
-									{/each}
-								</SidebarMenu>
-							</SidebarGroupContent>
-						</SidebarGroup>
-					</SidebarContent>
+							<SidebarGroup>
+								<SidebarGroupLabel>Support</SidebarGroupLabel>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										{#each utilItems as { label, icon: Icon }}
+											<SidebarMenuItem>
+												<SidebarMenuButton tooltipContent={label}>
+													<span class="liquid-glass-icon-pill" aria-hidden="true">
+														<Icon class="size-4 text-zinc-100" />
+													</span>
+													<span class="liquid-glass-nav-label">{label}</span>
+												</SidebarMenuButton>
+											</SidebarMenuItem>
+										{/each}
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
+						</div>
 
-					<SidebarFooter class="!p-0 border-t border-white/10 pt-4">
-						<SidebarMenu>
-							<SidebarMenuItem>
-								<SidebarMenuButton size="lg">
-									<div
-										class="flex size-8 items-center justify-center rounded-full border border-white/10 bg-white/10 backdrop-blur-sm"
-									>
-										<User />
-									</div>
-									<div class="flex flex-col gap-0.5 leading-none">
-										<span class="font-medium">John Doe</span>
-										<span class="text-xs opacity-60">john@acme.com</span>
-									</div>
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-						</SidebarMenu>
-					</SidebarFooter>
+						<div class="home-menu-footer border-t border-white/10 pt-4">
+							<SidebarMenu>
+								<SidebarMenuItem>
+									<SidebarMenuButton size="lg">
+										<div
+											class="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-zinc-100 shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]"
+										>
+											<User class="size-4" />
+										</div>
+										<div class="flex flex-col gap-0.5 leading-none">
+											<span class="font-medium">John Doe</span>
+											<span class="text-xs opacity-60">john@acme.com</span>
+										</div>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							</SidebarMenu>
+						</div>
+					</div>
 				</Sidebar>
 
 				<SidebarInset class="!bg-transparent">
@@ -285,19 +299,62 @@
 		object-position: center;
 	}
 
-	/*
-	 * liquidGL “menu-wrap” look (from demos/demo-1.html): soft border, fallback blur,
-	 * demo greys (#b7b7b7 accents), nav-like hovers.
-	 */
-	:global(.liquid-glass-sidebar [data-slot='sidebar-inner'].liquidGL.menu-wrap) {
-		background-color: transparent !important;
-		box-shadow: none !important;
-		backdrop-filter: blur(20px) saturate(180%);
+	/* demo-1 .menu-anchor / demo-4 .marquee-anchor — full-viewport overlay shell */
+	.liquid-glass-anchor {
+		z-index: 2;
 	}
 
-	/* liquidGL sets the lens to pointer-events: none; re-enable interaction on real UI */
-	:global(.liquid-glass-sidebar .liquidGL.menu-wrap .content) {
-		pointer-events: auto;
+	/*
+	 * Empty `.liquidGL.menu-wrap` backdrop only (see sidebar.svelte). No text inside — liquidGL
+	 * sets opacity on the lens node; UI lives in `.liquid-glass-ui` sibling. No CSS backdrop here.
+	 */
+	:global(.liquid-glass-sidebar .liquidGL.menu-wrap) {
+		overflow: clip;
+		box-shadow: none !important;
+	}
+
+	/* Foreground chrome — not a descendant of .liquidGL, so lens opacity never hides it */
+	:global(.liquid-glass-sidebar .liquid-glass-ui) {
+		isolation: isolate;
+		transform: translateZ(0);
+		color: #b7b7b7;
+	}
+
+	:global(.liquid-glass-sidebar .menu-items-wrap) {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 0%;
+		min-height: 0;
+		gap: 0.75rem;
+	}
+
+	:global(.liquid-glass-icon-pill) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		border-radius: 0.5rem;
+		background: rgb(24 24 27 / 0.92);
+		padding: 0.375rem;
+		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+	}
+
+	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-icon-pill) {
+		padding: 0.25rem;
+	}
+
+	:global(.liquid-glass-nav-label) {
+		color: #e4e4e7;
+	}
+
+	:global(.liquid-glass-trigger-pill) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.5rem;
+		background: rgb(24 24 27 / 0.92);
+		padding: 0.125rem;
+		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 	}
 
 	:global([data-slot='sidebar']:has(.liquid-glass-sidebar)) {
