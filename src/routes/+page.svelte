@@ -76,6 +76,26 @@
 		void window.__liquidGLRenderer__?.captureSnapshot?.();
 	}
 
+	/**
+	 * liquidGL mounts its canvas on `document.body` last, so it paints above the whole app.
+	 * Also, if the canvas stays behind `.app-shell`, transparent UI composites to the in-page
+	 * wallpaper instead of the WebGL layer — the glass never shows. Demo-1/4 keep backdrop →
+	 * canvas → chrome; we mirror that by inserting the canvas between wallpaper and the anchor.
+	 */
+	function mountLiquidGLCanvasInHomeStack() {
+		const r = window.__liquidGLRenderer__;
+		const canvas = r?.canvas;
+		const home = document.querySelector('.home-page');
+		const anchor = home?.querySelector('.liquid-glass-anchor');
+		if (!canvas || !home || !anchor || !canvas.parentNode) return;
+		if (canvas.parentNode !== home) {
+			home.insertBefore(canvas, anchor);
+		}
+		/* Above .home-wallpaper (0), below .liquid-glass-anchor (2); overrides addLens z when maxZ=0 */
+		canvas.style.zIndex = '1';
+		refreshLiquidGLSnapshot();
+	}
+
 	onMount(() => {
 		if (WALLPAPER_URLS.length > 0) {
 			wallpaperUrl = WALLPAPER_URLS[Math.floor(Math.random() * WALLPAPER_URLS.length)];
@@ -104,6 +124,9 @@
 					...LIQUID_GL_OPTIONS,
 					on: {
 						init() {
+							requestAnimationFrame(() => {
+								mountLiquidGLCanvasInHomeStack();
+							});
 							if (import.meta.env.DEV) {
 								console.log('liquidGL ready');
 							}
@@ -158,8 +181,8 @@
 
 		<!--
 			Demo-1 / demo-4 pattern: viewport anchor (cf. .menu-anchor / .marquee-anchor).
-			Pointer-events pass through the shell; the row restores interaction. Stacking is
-			ultimately fixed by .app-shell z-index above liquidGL’s body canvas.
+			The WebGL canvas is moved beside this layer (see mountLiquidGLCanvasInHomeStack):
+			wallpaper z-0 → canvas z-1 → this shell z-2 so glass composites above the backdrop.
 		-->
 		<div
 			class="liquid-glass-anchor pointer-events-none fixed inset-0 flex min-h-0 min-w-0 md:pointer-events-none"
@@ -299,7 +322,7 @@
 		object-position: center;
 	}
 
-	/* demo-1 .menu-anchor / demo-4 .marquee-anchor — full-viewport overlay shell */
+	/* Full-viewport overlay shell — z-index above canvas (see mountLiquidGLCanvasInHomeStack); `fixed` is from Tailwind classes */
 	.liquid-glass-anchor {
 		z-index: 2;
 	}
