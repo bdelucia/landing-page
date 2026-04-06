@@ -18,7 +18,10 @@
 		side?: "left" | "right";
 		variant?: "sidebar" | "floating" | "inset";
 		collapsible?: "offcanvas" | "icon" | "none";
-		/** liquidGL: outer `.liquidGL` + inner `.content` per library docs */
+		/**
+		 * liquidGL: empty `.liquidGL.menu-wrap` lens only — the library sets `pointer-events: none`
+		 * on the target; interactive UI must live in `.liquid-glass-ui` sibling, not inside `.liquidGL`.
+		 */
 		liquidGlass?: boolean;
 	} = $props();
 
@@ -104,17 +107,20 @@
 				data-sidebar="sidebar"
 				data-slot="sidebar-inner"
 				class={cn(
-					"flex size-full flex-col group-data-[variant=floating]:rounded-2xl",
+					"relative flex size-full min-h-0 flex-col overflow-hidden group-data-[variant=floating]:rounded-2xl",
 					liquidGlass &&
-						"liquidGL menu-wrap relative z-[20] overflow-hidden bg-transparent shadow-none ring-0 group-data-[variant=floating]:border group-data-[variant=floating]:border-white/15",
+						"bg-transparent shadow-none ring-0 group-data-[variant=floating]:border group-data-[variant=floating]:border-white/15",
 					!liquidGlass &&
-						"bg-sidebar group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border",
-					liquidGlass && "will-change-transform"
+						"bg-sidebar group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
 				)}
 			>
 				{#if liquidGlass}
 					<div
-						class="content relative z-[1] flex min-h-0 flex-1 flex-col p-4 !text-zinc-200 [&_svg]:text-current"
+						class="liquidGL menu-wrap pointer-events-none absolute inset-0 z-0 will-change-transform group-data-[variant=floating]:rounded-2xl"
+						aria-hidden="true"
+					></div>
+					<div
+						class="liquid-glass-ui relative z-10 flex min-h-0 flex-1 flex-col gap-2 p-4 !text-zinc-200 [&_svg]:text-current"
 					>
 						{@render children?.()}
 					</div>
