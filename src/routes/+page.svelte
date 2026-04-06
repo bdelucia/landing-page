@@ -20,6 +20,8 @@
 	import Gear from 'phosphor-svelte/lib/Gear';
 	import Question from 'phosphor-svelte/lib/Question';
 	import User from 'phosphor-svelte/lib/User';
+	import LiquidGlassSidebarNavIcon from '$lib/components/liquid-glass-sidebar-nav-icon.svelte';
+	import { cn } from '$lib/utils.js';
 
 	const WALLPAPER_URLS = Object.values(
 		import.meta.glob<string>('$lib/assets/backgrounds/*.{png,jpg,jpeg,webp,avif}', {
@@ -58,6 +60,17 @@
 		{ label: 'Settings', icon: Gear },
 		{ label: 'Help', icon: Question }
 	];
+
+	/**
+	 * SidebarMenuButton ships `group-data-[collapsible=icon]:size-8!` / `p-2!` — scoped CSS cannot beat it.
+	 * `!size-auto` lets the rail match the header trigger (pill + inner `size-8`); see LiquidGlassSidebarNavIcon.
+	 */
+	const lgNavItemCollapsed = 'group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full';
+	const lgNavBtnCollapsed =
+		'group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!inline-flex group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!min-h-0 group-data-[collapsible=icon]:!min-w-0 group-data-[collapsible=icon]:!max-w-none group-data-[collapsible=icon]:!shrink-0 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!gap-0 group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!rounded-lg';
+	const lgNavLabelCollapsed = 'group-data-[collapsible=icon]:hidden';
+	const lgFooterBtnCollapsed =
+		'group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!min-h-8 group-data-[collapsible=icon]:!max-h-8 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!gap-0 group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:[&>div:last-child]:hidden';
 
 	/** Picked on the client so SSR and hydration stay aligned. */
 	let wallpaperUrl = $state<string | undefined>(undefined);
@@ -280,12 +293,10 @@
 								<SidebarGroupContent>
 									<SidebarMenu>
 										{#each navItems as { label, icon: Icon }}
-											<SidebarMenuItem>
-												<SidebarMenuButton tooltipContent={label}>
-													<span class="liquid-glass-icon-pill" aria-hidden="true">
-														<Icon class="size-4 text-zinc-100" />
-													</span>
-													<span class="liquid-glass-nav-label">{label}</span>
+											<SidebarMenuItem class={lgNavItemCollapsed}>
+												<SidebarMenuButton tooltipContent={label} class={lgNavBtnCollapsed}>
+													<LiquidGlassSidebarNavIcon icon={Icon} />
+													<span class={cn('liquid-glass-nav-label', lgNavLabelCollapsed)}>{label}</span>
 												</SidebarMenuButton>
 											</SidebarMenuItem>
 										{/each}
@@ -298,12 +309,10 @@
 								<SidebarGroupContent>
 									<SidebarMenu>
 										{#each utilItems as { label, icon: Icon }}
-											<SidebarMenuItem>
-												<SidebarMenuButton tooltipContent={label}>
-													<span class="liquid-glass-icon-pill" aria-hidden="true">
-														<Icon class="size-4 text-zinc-100" />
-													</span>
-													<span class="liquid-glass-nav-label">{label}</span>
+											<SidebarMenuItem class={lgNavItemCollapsed}>
+												<SidebarMenuButton tooltipContent={label} class={lgNavBtnCollapsed}>
+													<LiquidGlassSidebarNavIcon icon={Icon} />
+													<span class={cn('liquid-glass-nav-label', lgNavLabelCollapsed)}>{label}</span>
 												</SidebarMenuButton>
 											</SidebarMenuItem>
 										{/each}
@@ -314,8 +323,8 @@
 
 						<div class="home-menu-footer border-t border-white/10 pt-4">
 							<SidebarMenu>
-								<SidebarMenuItem>
-									<SidebarMenuButton size="lg">
+								<SidebarMenuItem class={lgNavItemCollapsed}>
+									<SidebarMenuButton size="lg" class={lgFooterBtnCollapsed}>
 										<div
 											class="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-zinc-100 shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]"
 										>
@@ -419,30 +428,7 @@
 		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 	}
 
-	/*
-	 * Collapsed rail: size-8 buttons — no extra button padding; icon pill matches expanded
-	 * chrome (tighter padding so 16px icon + pill fits in 32px).
-	 */
-	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-sidebar [data-slot='sidebar-menu-button']) {
-		justify-content: center !important;
-		gap: 0 !important;
-		padding: 0 !important;
-	}
-
-	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-icon-pill) {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-		border-radius: 0.5rem;
-		background: rgb(24 24 27 / 0.92);
-		padding: 0.25rem;
-		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
-	}
-
-	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-nav-label) {
-		display: none !important;
-	}
+	/* Collapsed rail alignment + icon padding: Tailwind on SidebarMenuButton (see lgNav* constants) */
 
 	:global(.liquid-glass-nav-label) {
 		color: #e4e4e7;
@@ -505,18 +491,6 @@
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-footer'] [data-slot='sidebar-menu-button']) {
 		color: #e4e4e7;
-	}
-
-	:global([data-slot='sidebar'][data-collapsible='icon'] .home-menu-footer [data-slot='sidebar-menu-button']) {
-		justify-content: center !important;
-		padding: 0 !important;
-		gap: 0 !important;
-	}
-
-	:global(
-		[data-slot='sidebar'][data-collapsible='icon'] .home-menu-footer [data-slot='sidebar-menu-button'] > div:last-child
-	) {
-		display: none !important;
 	}
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-footer'] .text-xs.opacity-60) {
