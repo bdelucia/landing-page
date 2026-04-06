@@ -387,13 +387,6 @@
 						<div class="text-center">
 							<h1 class="text-4xl font-bold tracking-tight text-white drop-shadow-lg">Welcome</h1>
 							<p class="mt-3 text-lg text-white/60">Liquid Glass Sidebar</p>
-							<p class="mt-4">
-								<a
-									href="/demo"
-									class="text-sm font-medium text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
-									>liquidGL demo (NaughtyDuk)</a
-								>
-							</p>
 						</div>
 					</div>
 				</SidebarInset>

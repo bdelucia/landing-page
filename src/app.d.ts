@@ -27,15 +27,6 @@ declare global {
 			canvas: HTMLCanvasElement;
 			captureSnapshot?: () => Promise<boolean | void>;
 		};
-		/** jQuery + ripples plugin (loaded only on /demo) */
-		jQuery?: {
-			(sel: string): {
-				each: (fn: (this: HTMLElement) => void) => void;
-			};
-			(el: Element): {
-				ripples: (opts: Record<string, unknown>) => void;
-			};
-		};
 	}
 }
 
