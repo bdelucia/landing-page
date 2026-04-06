@@ -189,27 +189,15 @@
 		>
 			<div class="pointer-events-auto flex min-h-svh min-w-0 flex-1">
 				<Sidebar variant="floating" collapsible="icon" class="liquid-glass-sidebar" liquidGlass>
-					<div class="menu-logo-wrap border-b border-white/10 pb-4">
+					<div class="border-b border-white/10 pb-4">
 						<div
-							class="flex items-center gap-3 group-data-[collapsible=icon]:justify-center"
+							class="flex items-center justify-start group-data-[collapsible=icon]:justify-center"
 						>
 							<span class="liquid-glass-trigger-pill shrink-0">
 								<SidebarTrigger
 									class="text-zinc-100 hover:bg-white/10 hover:text-white"
 								/>
 							</span>
-							<div
-								class="flex min-w-0 flex-1 items-center gap-3 group-data-[collapsible=icon]:hidden"
-							>
-								<div
-									class="liquidglass-logo-mark flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-sm font-bold text-white/95 shadow-sm"
-								>
-									A
-								</div>
-								<span class="truncate text-base font-semibold tracking-tight text-[#e4e4e7]"
-									>Acme Inc</span
-								>
-							</div>
 						</div>
 					</div>
 
