@@ -10,6 +10,8 @@ declare global {
 	}
 
 	interface Window {
+		/** Set on `/` for liquidGL.syncWith() (GSAP ticker); see `+page.svelte` */
+		gsap?: unknown;
 		html2canvas?: (
 			element: Element,
 			options?: Record<string, unknown>

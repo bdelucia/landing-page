@@ -117,6 +117,20 @@
 			if (!window.matchMedia('(min-width: 768px)').matches) return;
 			if (!document.querySelector('.liquid-glass-sidebar .liquidGL')) return;
 
+			/*
+			 * demos/animation-demo.html: liquidGL.syncWith() uses the GSAP ticker so the lens
+			 * keeps updating during CSS width transitions (sidebar collapse) and other motion.
+			 * liquidGL expects window.gsap.ScrollTrigger to exist (ESM gsap does not attach it).
+			 */
+			const [{ default: gsap }, { ScrollTrigger }] = await Promise.all([
+				import('gsap'),
+				import('gsap/ScrollTrigger')
+			]);
+			if (cancelled) return;
+			gsap.registerPlugin(ScrollTrigger);
+			Object.assign(gsap, { ScrollTrigger });
+			(window as Window & { gsap: typeof gsap }).gsap = gsap;
+
 			resetLiquidGLRenderer();
 
 			try {
@@ -138,7 +152,7 @@
 			}
 
 			function syncScroll() {
-				window.liquidGL?.syncWith?.({ gsap: false });
+				window.liquidGL?.syncWith?.({});
 			}
 			if (document.readyState === 'complete') {
 				syncScroll();

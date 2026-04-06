@@ -19,8 +19,9 @@
 		variant?: "sidebar" | "floating" | "inset";
 		collapsible?: "offcanvas" | "icon" | "none";
 		/**
-		 * liquidGL: empty `.liquidGL.menu-wrap` lens only — the library sets `pointer-events: none`
-		 * on the target; interactive UI must live in `.liquid-glass-ui` sibling, not inside `.liquidGL`.
+		 * liquidGL: `.liquidGL.menu-wrap` wraps the whole panel (lens bounds = sidebar).
+		 * The library sets `pointer-events: none` on that node; `.liquid-glass-ui` uses
+		 * `pointer-events: auto` so triggers/buttons still receive clicks (see MDN on descendants).
 		 */
 		liquidGlass?: boolean;
 	} = $props();
@@ -107,20 +108,16 @@
 				data-sidebar="sidebar"
 				data-slot="sidebar-inner"
 				class={cn(
-					"relative flex size-full min-h-0 flex-col overflow-hidden group-data-[variant=floating]:rounded-2xl",
+					"flex size-full min-h-0 flex-col overflow-hidden group-data-[variant=floating]:rounded-2xl",
 					liquidGlass &&
-						"bg-transparent shadow-none ring-0 group-data-[variant=floating]:border group-data-[variant=floating]:border-white/15",
+						"liquidGL menu-wrap relative bg-transparent shadow-none ring-0 will-change-transform group-data-[variant=floating]:border group-data-[variant=floating]:border-white/15",
 					!liquidGlass &&
 						"bg-sidebar group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
 				)}
 			>
 				{#if liquidGlass}
 					<div
-						class="liquidGL menu-wrap pointer-events-none absolute inset-0 z-0 will-change-transform group-data-[variant=floating]:rounded-2xl"
-						aria-hidden="true"
-					></div>
-					<div
-						class="liquid-glass-ui relative z-10 flex min-h-0 flex-1 flex-col gap-2 p-4 !text-zinc-200 [&_svg]:text-current"
+						class="liquid-glass-ui pointer-events-auto relative z-10 flex min-h-0 flex-1 flex-col gap-2 p-4 !text-zinc-200 [&_svg]:text-current"
 					>
 						{@render children?.()}
 					</div>
