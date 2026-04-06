@@ -21,15 +21,9 @@
 	import Question from 'phosphor-svelte/lib/Question';
 	import User from 'phosphor-svelte/lib/User';
 	import LiquidGlassSidebarNavIcon from '$lib/components/liquid-glass-sidebar-nav-icon.svelte';
+	import SettingsDialog from '$lib/components/settings-dialog.svelte';
+	import { getSavedWallpaperUrl, persistWallpaperChoice, pickRandomWallpaperUrl } from '$lib/wallpaper.js';
 	import { cn } from '$lib/utils.js';
-
-	const WALLPAPER_URLS = Object.values(
-		import.meta.glob<string>('$lib/assets/backgrounds/*.{png,jpg,jpeg,webp,avif}', {
-			eager: true,
-			query: '?url',
-			import: 'default'
-		})
-	);
 
 	/** Matches liquidGL docs: snapshot + class on the glass target */
 	const LIQUID_GL_OPTIONS = {
@@ -56,10 +50,7 @@
 		{ label: 'Messages', icon: ChatCircle }
 	];
 
-	const utilItems = [
-		{ label: 'Settings', icon: Gear },
-		{ label: 'Help', icon: Question }
-	];
+	const utilItems = [{ label: 'Help', icon: Question }];
 
 	/**
 	 * SidebarMenuButton ships `group-data-[collapsible=icon]:size-8!` / `p-2!` — scoped CSS cannot beat it.
@@ -71,6 +62,8 @@
 	const lgNavLabelCollapsed = 'group-data-[collapsible=icon]:hidden';
 	const lgFooterBtnCollapsed =
 		'group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!min-h-8 group-data-[collapsible=icon]:!max-h-8 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!gap-0 group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:[&>div:last-child]:hidden';
+
+	let settingsOpen = $state(false);
 
 	/** Picked on the client so SSR and hydration stay aligned. */
 	let wallpaperUrl = $state<string | undefined>(undefined);
@@ -114,10 +107,45 @@
 		mountLiquidGLCanvasInHomeStack();
 	}
 
-	onMount(() => {
-		if (WALLPAPER_URLS.length > 0) {
-			wallpaperUrl = WALLPAPER_URLS[Math.floor(Math.random() * WALLPAPER_URLS.length)];
+	/**
+	 * html2canvas snapshots whatever is painted; changing `wallpaperUrl` updates the `<img>` async.
+	 * Wait for decode + a frame, re-mount the canvas, then mirror init’s delayed captures so the
+	 * WebGL texture matches the new backdrop (see liquidGL `captureSnapshot` + `_capturing` guard).
+	 */
+	async function reloadLiquidGLAfterWallpaperChange() {
+		if (!browser) return;
+		await tick();
+		const img = document.querySelector<HTMLImageElement>('.home-wallpaper-img');
+		if (img) {
+			if (!img.complete) {
+				await new Promise<void>((resolve) => {
+					img.addEventListener('load', () => resolve(), { once: true });
+					img.addEventListener('error', () => resolve(), { once: true });
+				});
+			}
+			try {
+				await img.decode();
+			} catch {
+				/* decode is optional */
+			}
 		}
+		await new Promise<void>((r) =>
+			requestAnimationFrame(() => requestAnimationFrame(() => r()))
+		);
+
+		mountLiquidGLCanvasInHomeStack();
+		window.liquidGL?.syncWith?.({});
+
+		for (const ms of [120, 400, 1200]) {
+			setTimeout(() => {
+				mountLiquidGLCanvasInHomeStack();
+				window.liquidGL?.syncWith?.({});
+			}, ms);
+		}
+	}
+
+	onMount(() => {
+		wallpaperUrl = getSavedWallpaperUrl() ?? pickRandomWallpaperUrl();
 
 		let cancelled = false;
 		const timeoutIds: ReturnType<typeof setTimeout>[] = [];
@@ -277,7 +305,7 @@
 						>
 							<span class="liquid-glass-trigger-pill shrink-0">
 								<SidebarTrigger
-									class="text-zinc-100 hover:bg-white/10 hover:text-white"
+									class="text-white hover:bg-white/10 hover:text-white"
 								/>
 							</span>
 						</div>
@@ -304,21 +332,31 @@
 								</SidebarGroupContent>
 							</SidebarGroup>
 
-							<SidebarGroup>
-								<SidebarGroupLabel>Support</SidebarGroupLabel>
-								<SidebarGroupContent>
-									<SidebarMenu>
-										{#each utilItems as { label, icon: Icon }}
-											<SidebarMenuItem class={lgNavItemCollapsed}>
-												<SidebarMenuButton tooltipContent={label} class={lgNavBtnCollapsed}>
-													<LiquidGlassSidebarNavIcon icon={Icon} />
-													<span class={cn('liquid-glass-nav-label', lgNavLabelCollapsed)}>{label}</span>
-												</SidebarMenuButton>
-											</SidebarMenuItem>
-										{/each}
-									</SidebarMenu>
-								</SidebarGroupContent>
-							</SidebarGroup>
+						<SidebarGroup>
+							<SidebarGroupLabel>Support</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu>
+									<SidebarMenuItem class={lgNavItemCollapsed}>
+										<SidebarMenuButton
+											tooltipContent="Settings"
+											class={lgNavBtnCollapsed}
+											onclick={() => (settingsOpen = true)}
+										>
+											<LiquidGlassSidebarNavIcon icon={Gear} />
+											<span class={cn('liquid-glass-nav-label', lgNavLabelCollapsed)}>Settings</span>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+									{#each utilItems as { label, icon: Icon }}
+										<SidebarMenuItem class={lgNavItemCollapsed}>
+											<SidebarMenuButton tooltipContent={label} class={lgNavBtnCollapsed}>
+												<LiquidGlassSidebarNavIcon icon={Icon} />
+												<span class={cn('liquid-glass-nav-label', lgNavLabelCollapsed)}>{label}</span>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+									{/each}
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
 						</div>
 
 						<div class="home-menu-footer border-t border-white/10 pt-4">
@@ -326,7 +364,7 @@
 								<SidebarMenuItem class={lgNavItemCollapsed}>
 									<SidebarMenuButton size="lg" class={lgFooterBtnCollapsed}>
 										<div
-											class="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-zinc-100 shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]"
+											class="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]"
 										>
 											<User class="size-4" />
 										</div>
@@ -363,6 +401,16 @@
 		</div>
 	</div>
 </SidebarProvider>
+
+<SettingsDialog
+	bind:open={settingsOpen}
+	bind:currentWallpaper={wallpaperUrl}
+	onApply={async (url, filename) => {
+		wallpaperUrl = url;
+		persistWallpaperChoice(filename);
+		await reloadLiquidGLAfterWallpaperChange();
+	}}
+/>
 
 <style>
 	:global(.app-shell:has(.home-shell) .bg) {
@@ -406,7 +454,7 @@
 	:global(.liquid-glass-sidebar .liquid-glass-ui) {
 		isolation: isolate;
 		transform: translateZ(0);
-		color: #b7b7b7;
+		color: #ffffff;
 	}
 
 	:global(.liquid-glass-sidebar .menu-items-wrap) {
@@ -431,7 +479,7 @@
 	/* Collapsed rail alignment + icon padding: Tailwind on SidebarMenuButton (see lgNav* constants) */
 
 	:global(.liquid-glass-nav-label) {
-		color: #e4e4e7;
+		color: #ffffff;
 	}
 
 	:global(.liquid-glass-trigger-pill) {
@@ -445,10 +493,10 @@
 	}
 
 	:global([data-slot='sidebar']:has(.liquid-glass-sidebar)) {
-		--sidebar-foreground: #e4e4e7;
+		--sidebar-foreground: #ffffff;
 		--sidebar-accent: rgb(39 39 42 / 50%);
-		--sidebar-accent-foreground: #fafafa;
-		--sidebar-primary: #fafafa;
+		--sidebar-accent-foreground: #ffffff;
+		--sidebar-primary: #ffffff;
 		--sidebar-primary-foreground: #18181b;
 		--sidebar-border: rgb(255 255 255 / 12%);
 		--sidebar-ring: rgb(255 255 255 / 25%);
@@ -460,14 +508,14 @@
 	}
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-group-label']) {
-		color: #b7b7b7 !important;
+		color: #ffffff !important;
 		font-weight: 700 !important;
 		letter-spacing: -0.04rem !important;
 		text-transform: none;
 	}
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-menu-button']) {
-		color: #d4d4d8 !important;
+		color: #ffffff !important;
 		border-radius: 0.75rem;
 		transition:
 			background 0.2s ease,
@@ -477,24 +525,20 @@
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-menu-button']:hover) {
 		background: rgb(39 39 42 / 50%) !important;
-		color: #fafafa !important;
+		color: #ffffff !important;
 	}
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-menu-button'] svg) {
-		opacity: 0.85;
+		opacity: 1;
 		transition: opacity 0.2s ease;
 	}
 
-	:global(.liquid-glass-sidebar [data-slot='sidebar-menu-button']:hover svg) {
-		opacity: 1;
-	}
-
 	:global(.liquid-glass-sidebar [data-slot='sidebar-footer'] [data-slot='sidebar-menu-button']) {
-		color: #e4e4e7;
+		color: #ffffff;
 	}
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-footer'] .text-xs.opacity-60) {
-		color: #b7b7b7 !important;
+		color: #ffffff !important;
 		opacity: 1 !important;
 	}
 </style>
