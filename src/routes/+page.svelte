@@ -203,7 +203,7 @@
 		>
 			<div class="pointer-events-auto flex min-h-svh min-w-0 flex-1">
 				<Sidebar variant="floating" collapsible="icon" class="liquid-glass-sidebar" liquidGlass>
-					<div class="border-b border-white/10 pb-4">
+					<div class="border-b border-white/10 pb-4 group-data-[collapsible=icon]:pb-2">
 						<div
 							class="flex items-center justify-start group-data-[collapsible=icon]:justify-center"
 						>
@@ -364,8 +364,31 @@
 		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 	}
 
+	/*
+	 * Collapsed icon rail: menu buttons are size-8 (32px). Default p-2 + icon pill padding
+	 * overflows — drop pill chrome, zero padding, center the glyph.
+	 */
+	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-sidebar [data-slot='sidebar-menu-button']) {
+		justify-content: center !important;
+		gap: 0 !important;
+		padding: 0 !important;
+	}
+
 	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-icon-pill) {
-		padding: 0.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		margin: 0;
+		background: transparent;
+		box-shadow: none;
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+	}
+
+	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-nav-label) {
+		display: none !important;
 	}
 
 	:global(.liquid-glass-nav-label) {
@@ -429,6 +452,18 @@
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-footer'] [data-slot='sidebar-menu-button']) {
 		color: #e4e4e7;
+	}
+
+	:global([data-slot='sidebar'][data-collapsible='icon'] .home-menu-footer [data-slot='sidebar-menu-button']) {
+		justify-content: center !important;
+		padding: 0 !important;
+		gap: 0 !important;
+	}
+
+	:global(
+		[data-slot='sidebar'][data-collapsible='icon'] .home-menu-footer [data-slot='sidebar-menu-button'] > div:last-child
+	) {
+		display: none !important;
 	}
 
 	:global(.liquid-glass-sidebar [data-slot='sidebar-footer'] .text-xs.opacity-60) {

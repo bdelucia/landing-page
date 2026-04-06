@@ -117,7 +117,7 @@
 			>
 				{#if liquidGlass}
 					<div
-						class="liquid-glass-ui pointer-events-auto relative z-10 flex min-h-0 flex-1 flex-col gap-2 p-4 !text-zinc-200 [&_svg]:text-current"
+						class="liquid-glass-ui pointer-events-auto relative z-10 flex min-h-0 flex-1 flex-col gap-2 p-4 !text-zinc-200 group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:p-2 [&_svg]:text-current"
 					>
 						{@render children?.()}
 					</div>
