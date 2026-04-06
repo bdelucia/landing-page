@@ -2,6 +2,9 @@ import { browser } from '$app/environment';
 
 export const WALLPAPER_STORAGE_KEY = 'landing-page:wallpaper-filename';
 
+/** Used when nothing is stored in localStorage yet. */
+export const DEFAULT_WALLPAPER_FILENAME = 'plane_trail_sky.jpg';
+
 export type WallpaperEntry = { url: string; filename: string; name: string };
 
 const wallpapersModule = import.meta.glob<string>('$lib/assets/backgrounds/*.{png,jpg,jpeg,webp,avif}', {
@@ -53,10 +56,9 @@ export function persistWallpaperChoice(filename: string): void {
 	}
 }
 
-export function pickRandomWallpaperUrl(): string | undefined {
-	if (wallpaperEntries.length === 0) return undefined;
-	const i = Math.floor(Math.random() * wallpaperEntries.length);
-	return wallpaperEntries[i]?.url;
+/** Saved wallpaper URL, or bundled default on first visit (not persisted until user applies in Settings). */
+export function getWallpaperUrlForDisplay(): string | undefined {
+	return getSavedWallpaperUrl() ?? getUrlForFilename(DEFAULT_WALLPAPER_FILENAME);
 }
 
 export function filenameForUrl(url: string): string | undefined {

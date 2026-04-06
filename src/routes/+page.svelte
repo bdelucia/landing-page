@@ -22,7 +22,7 @@
 	import User from 'phosphor-svelte/lib/User';
 	import LiquidGlassSidebarNavIcon from '$lib/components/liquid-glass-sidebar-nav-icon.svelte';
 	import SettingsDialog from '$lib/components/settings-dialog.svelte';
-	import { getSavedWallpaperUrl, persistWallpaperChoice, pickRandomWallpaperUrl } from '$lib/wallpaper.js';
+	import { getWallpaperUrlForDisplay, persistWallpaperChoice } from '$lib/wallpaper.js';
 	import { cn } from '$lib/utils.js';
 
 	/** Matches liquidGL docs: snapshot + class on the glass target */
@@ -145,7 +145,7 @@
 	}
 
 	onMount(() => {
-		wallpaperUrl = getSavedWallpaperUrl() ?? pickRandomWallpaperUrl();
+		wallpaperUrl = getWallpaperUrlForDisplay();
 
 		let cancelled = false;
 		const timeoutIds: ReturnType<typeof setTimeout>[] = [];
@@ -299,18 +299,6 @@
 		>
 			<div class="pointer-events-auto flex min-h-svh min-w-0 flex-1">
 				<Sidebar variant="floating" collapsible="icon" class="liquid-glass-sidebar" liquidGlass>
-					<div class="border-b border-white/10 pb-4 group-data-[collapsible=icon]:pb-2">
-						<div
-							class="flex items-center justify-start group-data-[collapsible=icon]:justify-center"
-						>
-							<span class="liquid-glass-trigger-pill shrink-0">
-								<SidebarTrigger
-									class="text-white hover:bg-white/10 hover:text-white"
-								/>
-							</span>
-						</div>
-					</div>
-
 					<div class="menu-items-wrap">
 						<div
 							class="home-menu-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-auto no-scrollbar"
@@ -380,7 +368,9 @@
 				</Sidebar>
 
 				<SidebarInset class="!bg-transparent">
-					<header class="flex h-14 items-center gap-2 px-4 md:hidden">
+					<header
+						class="flex h-14 shrink-0 items-center gap-2 border-b border-white/10 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
+					>
 						<SidebarTrigger class="text-white/80 hover:bg-white/10 hover:text-white" />
 					</header>
 					<div class="flex flex-1 items-center justify-center p-6">
