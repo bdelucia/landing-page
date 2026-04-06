@@ -365,8 +365,8 @@
 	}
 
 	/*
-	 * Collapsed icon rail: menu buttons are size-8 (32px). Default p-2 + icon pill padding
-	 * overflows — drop pill chrome, zero padding, center the glyph.
+	 * Collapsed rail: size-8 buttons — no extra button padding; icon pill matches expanded
+	 * chrome (tighter padding so 16px icon + pill fits in 32px).
 	 */
 	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-sidebar [data-slot='sidebar-menu-button']) {
 		justify-content: center !important;
@@ -375,16 +375,14 @@
 	}
 
 	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-icon-pill) {
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		padding: 0;
-		margin: 0;
-		background: transparent;
-		box-shadow: none;
-		width: 100%;
-		height: 100%;
-		min-width: 0;
+		flex-shrink: 0;
+		border-radius: 0.5rem;
+		background: rgb(24 24 27 / 0.92);
+		padding: 0.25rem;
+		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 	}
 
 	:global([data-slot='sidebar'][data-collapsible='icon'] .liquid-glass-nav-label) {
