@@ -96,12 +96,25 @@
 		refreshLiquidGLSnapshot();
 	}
 
+	/** Re-mount canvas + re-capture after layout / html2canvas are stable (fixes flaky first paint). */
+	function recoverLiquidGLAfterLayout() {
+		mountLiquidGLCanvasInHomeStack();
+	}
+
 	onMount(() => {
 		if (WALLPAPER_URLS.length > 0) {
 			wallpaperUrl = WALLPAPER_URLS[Math.floor(Math.random() * WALLPAPER_URLS.length)];
 		}
 
 		let cancelled = false;
+		const timeoutIds: ReturnType<typeof setTimeout>[] = [];
+
+		function safeSetTimeout(fn: () => void, ms: number) {
+			const id = setTimeout(() => {
+				if (!cancelled) fn();
+			}, ms);
+			timeoutIds.push(id);
+		}
 
 		async function waitForScripts() {
 			while (
@@ -112,10 +125,19 @@
 			}
 		}
 
+		/** Hydration can lag defer scripts; one tick is not always enough for `.liquidGL` in the DOM. */
+		async function waitForLiquidGlassTarget(maxMs = 8000) {
+			const deadline = performance.now() + maxMs;
+			while (performance.now() < deadline && !cancelled) {
+				if (document.querySelector('.liquid-glass-sidebar .liquidGL')) return true;
+				await new Promise((r) => requestAnimationFrame(r));
+			}
+			return false;
+		}
+
 		async function initLiquidGlass() {
 			if (cancelled) return;
 			if (!window.matchMedia('(min-width: 768px)').matches) return;
-			if (!document.querySelector('.liquid-glass-sidebar .liquidGL')) return;
 
 			/*
 			 * demos/animation-demo.html: liquidGL.syncWith() uses the GSAP ticker so the lens
@@ -138,8 +160,11 @@
 					...LIQUID_GL_OPTIONS,
 					on: {
 						init() {
+							/* Double rAF: wait for layout after lens attaches (matches common paint fix). */
 							requestAnimationFrame(() => {
-								mountLiquidGLCanvasInHomeStack();
+								requestAnimationFrame(() => {
+									mountLiquidGLCanvasInHomeStack();
+								});
 							});
 							if (import.meta.env.DEV) {
 								console.log('liquidGL ready');
@@ -154,23 +179,53 @@
 			function syncScroll() {
 				window.liquidGL?.syncWith?.({});
 			}
-			if (document.readyState === 'complete') {
+
+			function onReadyToSync() {
 				syncScroll();
+				recoverLiquidGLAfterLayout();
+			}
+
+			if (document.readyState === 'complete') {
+				requestAnimationFrame(onReadyToSync);
 			} else {
-				window.addEventListener('load', syncScroll, { once: true });
+				window.addEventListener('load', () => requestAnimationFrame(onReadyToSync), { once: true });
+			}
+
+			/*
+			 * html2canvas + first snapshot often fail or size wrong before fonts/layout settle.
+			 * Opening devtools triggers resize → capture; mirror that with timed recoveries.
+			 */
+			for (const ms of [120, 400, 1200]) {
+				safeSetTimeout(recoverLiquidGLAfterLayout, ms);
 			}
 		}
 
 		async function run() {
 			await tick();
 			await waitForScripts();
+			if (cancelled) return;
+			if (!(await waitForLiquidGlassTarget())) {
+				if (import.meta.env.DEV) {
+					console.warn('[liquidGL] .liquidGL target not found after waiting; skipping init');
+				}
+				return;
+			}
+			await tick();
+			if (cancelled) return;
 			await initLiquidGlass();
 		}
 
 		void run();
 
+		const onPageShow = (e: PageTransitionEvent) => {
+			if (e.persisted) recoverLiquidGLAfterLayout();
+		};
+		window.addEventListener('pageshow', onPageShow);
+
 		return () => {
 			cancelled = true;
+			for (const id of timeoutIds) clearTimeout(id);
+			window.removeEventListener('pageshow', onPageShow);
 		};
 	});
 
