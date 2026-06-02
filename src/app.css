@@ -1,141 +1,41 @@
+@import '@fontsource-variable/google-sans-flex/wght.css';
 @import 'tailwindcss';
-@import 'tw-animate-css';
-@import 'shadcn-svelte/tailwind.css';
-@import '@fontsource-variable/inter';
-
-@custom-variant dark (&:is(.dark *));
-
-/*
- * hsl() theme — html2canvas (used by liquidGL) does not parse oklch().
- * Keep tokens here compatible with snapshots if you use liquidGL.
- */
-:root {
-	--background: hsl(0 0% 100%);
-	--foreground: hsl(240 6% 10%);
-	--card: hsl(0 0% 100%);
-	--card-foreground: hsl(240 6% 10%);
-	--popover: hsl(0 0% 100%);
-	--popover-foreground: hsl(240 6% 10%);
-	--primary: hsl(180 100% 50%);
-	--primary-foreground: hsl(200 30% 10%);
-	--secondary: hsl(240 5% 96%);
-	--secondary-foreground: hsl(240 6% 10%);
-	--muted: hsl(240 5% 96%);
-	--muted-foreground: hsl(240 4% 46%);
-	--accent: hsl(240 5% 96%);
-	--accent-foreground: hsl(240 6% 10%);
-	--destructive: hsl(0 72% 51%);
-	--border: hsl(240 6% 90%);
-	--input: hsl(240 6% 90%);
-	--ring: hsl(240 5% 65%);
-	--chart-1: hsl(280 55% 58%);
-	--chart-2: hsl(310 50% 52%);
-	--chart-3: hsl(320 48% 48%);
-	--chart-4: hsl(325 45% 44%);
-	--chart-5: hsl(330 42% 40%);
-	--radius: 0.625rem;
-	--sidebar: hsl(240 5% 98%);
-	--sidebar-foreground: hsl(240 6% 10%);
-	--sidebar-primary: hsl(180 100% 50%);
-	--sidebar-primary-foreground: hsl(200 30% 10%);
-	--sidebar-accent: hsl(240 5% 96%);
-	--sidebar-accent-foreground: hsl(240 6% 10%);
-	--sidebar-border: hsl(240 6% 90%);
-	--sidebar-ring: hsl(240 5% 65%);
-}
-
-.dark {
-	--background: hsl(240 6% 10%);
-	--foreground: hsl(0 0% 98%);
-	--card: hsl(240 5% 14%);
-	--card-foreground: hsl(0 0% 98%);
-	--popover: hsl(240 5% 14%);
-	--popover-foreground: hsl(0 0% 98%);
-	--primary: hsl(180 100% 50%);
-	--primary-foreground: hsl(200 30% 10%);
-	--secondary: hsl(240 4% 18%);
-	--secondary-foreground: hsl(0 0% 98%);
-	--muted: hsl(240 4% 18%);
-	--muted-foreground: hsl(240 5% 65%);
-	--accent: hsl(240 4% 18%);
-	--accent-foreground: hsl(0 0% 98%);
-	--destructive: hsl(0 62% 55%);
-	--border: hsl(0 0% 100% / 0.1);
-	--input: hsl(0 0% 100% / 0.15);
-	--ring: hsl(240 5% 64%);
-	--chart-1: hsl(280 55% 58%);
-	--chart-2: hsl(310 50% 52%);
-	--chart-3: hsl(320 48% 48%);
-	--chart-4: hsl(325 45% 44%);
-	--chart-5: hsl(330 42% 40%);
-	--sidebar: hsl(240 5% 14%);
-	--sidebar-foreground: hsl(0 0% 98%);
-	--sidebar-primary: hsl(180 100% 50%);
-	--sidebar-primary-foreground: hsl(200 30% 10%);
-	--sidebar-accent: hsl(240 4% 18%);
-	--sidebar-accent-foreground: hsl(0 0% 98%);
-	--sidebar-border: hsl(0 0% 100% / 0.1);
-	--sidebar-ring: hsl(240 5% 64%);
-}
+@import './lib/theme.css';
 
 @theme inline {
-	--font-sans: 'Inter Variable', sans-serif;
-	--color-sidebar-ring: var(--sidebar-ring);
-	--color-sidebar-border: var(--sidebar-border);
-	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-	--color-sidebar-accent: var(--sidebar-accent);
-	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-	--color-sidebar-primary: var(--sidebar-primary);
-	--color-sidebar-foreground: var(--sidebar-foreground);
-	--color-sidebar: var(--sidebar);
-	--color-chart-5: var(--chart-5);
-	--color-chart-4: var(--chart-4);
-	--color-chart-3: var(--chart-3);
-	--color-chart-2: var(--chart-2);
-	--color-chart-1: var(--chart-1);
-	--color-ring: var(--ring);
-	--color-input: var(--input);
-	--color-border: var(--border);
-	--color-destructive: var(--destructive);
-	--color-accent-foreground: var(--accent-foreground);
-	--color-accent: var(--accent);
-	--color-muted-foreground: var(--muted-foreground);
-	--color-muted: var(--muted);
-	--color-secondary-foreground: var(--secondary-foreground);
-	--color-secondary: var(--secondary);
-	--color-primary-foreground: var(--primary-foreground);
-	--color-primary: var(--primary);
-	--color-popover-foreground: var(--popover-foreground);
-	--color-popover: var(--popover);
-	--color-card-foreground: var(--card-foreground);
-	--color-card: var(--card);
-	--color-foreground: var(--foreground);
-	--color-background: var(--background);
-	--radius-sm: calc(var(--radius) * 0.6);
-	--radius-md: calc(var(--radius) * 0.8);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) * 1.4);
-	--radius-2xl: calc(var(--radius) * 1.8);
-	--radius-3xl: calc(var(--radius) * 2.2);
-	--radius-4xl: calc(var(--radius) * 2.6);
+	--font-sans: var(--font-sans);
+	--color-primary: var(--color-primary);
+	--color-secondary: var(--color-secondary);
+	--color-tertiary: var(--color-tertiary);
+	--color-background: var(--color-background);
+	--color-foreground: var(--color-foreground);
+	--color-muted: var(--color-muted);
+	--color-muted-foreground: var(--color-muted-foreground);
+	--color-accent: var(--color-accent);
+	--color-accent-muted: var(--color-accent-muted);
+	--color-border: var(--color-border);
+	--color-border-strong: var(--color-border-strong);
+	--color-ring: var(--color-ring);
+	--color-focus: var(--color-focus);
+	--color-surface: var(--color-surface);
+	--color-surface-raised: var(--color-surface-raised);
+	--radius-sm: var(--radius-sm);
+	--radius-md: var(--radius-md);
+	--radius-lg: var(--radius-lg);
+	--radius-full: var(--radius-full);
 }
 
 @layer base {
-	* {
-		@apply border-border outline-ring/50;
-	}
+	html,
 	body {
-		@apply bg-background text-foreground;
-	}
-	html {
-		@apply font-sans;
+		height: 100dvh;
+		overflow: hidden;
 	}
 
-	/*
-	 * Tailwind preflight sets ::placeholder with color-mix(in oklab, …) which
-	 * html2canvas 1.4.x cannot parse. hsl() is safe.
-	 */
-	::placeholder {
-		color: hsl(0 0% 45% / 0.85);
+	body {
+		margin: 0;
+		background-color: var(--color-background);
+		color: var(--color-foreground);
+		font-family: var(--font-sans);
 	}
 }

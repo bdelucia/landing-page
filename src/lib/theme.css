@@ -1,0 +1,44 @@
+/**
+ * Personal palette
+ * - primary:   #F6F5F4  slightly desaturated white
+ * - secondary: #00FFFF  neon blue
+ * - tertiary:  #3584E4  archy blue
+ * - background:#242438  deep blue-violet
+ */
+
+:root {
+	--font-sans: 'Google Sans Flex Variable', system-ui, sans-serif;
+
+	--palette-primary: #f6f5f4;
+	--palette-secondary: #00ffff;
+	--palette-tertiary: #3584e4;
+	--palette-background: #242438;
+
+	/* Semantic tokens */
+	--color-primary: var(--palette-primary);
+	--color-secondary: var(--palette-secondary);
+	--color-tertiary: var(--palette-tertiary);
+	--color-background: var(--palette-background);
+
+	--color-foreground: var(--palette-primary);
+	--color-muted: #c8c7c6;
+	--color-muted-foreground: #9a9998;
+
+	--color-accent: var(--palette-secondary);
+	--color-accent-muted: var(--palette-tertiary);
+
+	--color-border: rgb(246 245 244 / 12%);
+	--color-border-strong: rgb(246 245 244 / 22%);
+
+	--color-ring: var(--palette-secondary);
+	--color-focus: var(--palette-secondary);
+
+	/* Surfaces (cards, inputs) lifted slightly above background */
+	--color-surface: #2e2e45;
+	--color-surface-raised: #363652;
+
+	--radius-sm: 0.375rem;
+	--radius-md: 0.5rem;
+	--radius-lg: 0.75rem;
+	--radius-full: 9999px;
+}
