@@ -1,3 +1,5 @@
+/// <reference types="unplugin-icons/types/svelte" />
+
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
@@ -7,26 +9,6 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
-	}
-
-	interface Window {
-		/** Set on `/` for liquidGL.syncWith() (GSAP ticker); see `+page.svelte` */
-		gsap?: unknown;
-		html2canvas?: (
-			element: Element,
-			options?: Record<string, unknown>
-		) => Promise<HTMLCanvasElement>;
-		liquidGL?: ((options?: Record<string, unknown>) => unknown) & {
-			syncWith?: (config?: Record<string, unknown>) => {
-				lenis?: unknown;
-				locomotiveScroll?: unknown;
-			};
-			registerDynamic?: (elements: unknown) => void;
-		};
-		__liquidGLRenderer__?: {
-			canvas: HTMLCanvasElement;
-			captureSnapshot?: () => Promise<boolean | void>;
-		};
 	}
 }
 
