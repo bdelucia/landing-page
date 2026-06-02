@@ -1,43 +1,35 @@
-<script>import "../app.css";
-import favicon from '$lib/assets/favicon.svg';
-import { backgroundUrls, getDailyBackgroundUrl } from '$lib/backgrounds';
+<script lang="ts">
+	import '../app.css';
+	import favicon from '$lib/assets/favicon.svg';
+	import background from '$lib/assets/backgrounds/plane_trail_sky.jpg';
 
-let { children } = $props();
-
-const backgroundUrl = $derived(getDailyBackgroundUrl(backgroundUrls));</script>
+	let { children } = $props();
+</script>
 
 <svelte:head>
-	<link rel="icon" href="{favicon}" />
+	<link rel="icon" href={favicon} />
 </svelte:head>
 
 <div class="app-shell">
-	{#if backgroundUrl}
-		<div class="bg" aria-hidden="true">
-			<div class="bg-image" style="background-image: url({backgroundUrl});"></div>
-			<div class="bg-scrim"></div>
-		</div>
-	{/if}
-	<div class="content">
-		{@render children()}
+	<div class="bg" aria-hidden="true">
+		<img class="bg-image" src={background} alt="" fetchpriority="high" />
 	</div>
+
+	<main class="content">
+		{@render children()}
+	</main>
 </div>
 
-
 <style>
-	:global(body) {
-		margin: 0;
-		min-height: 100dvh;
-	}
-
 	.app-shell {
 		position: relative;
-		min-height: 100dvh;
+		height: 100dvh;
+		overflow: hidden;
 		isolation: isolate;
 	}
 
-	/* absolute (not fixed) so html2canvas — used by liquidGL — includes this layer; fixed nodes are skipped */
 	.bg {
-		position: absolute;
+		position: fixed;
 		inset: 0;
 		z-index: 0;
 		overflow: hidden;
@@ -45,28 +37,19 @@ const backgroundUrl = $derived(getDailyBackgroundUrl(backgroundUrls));</script>
 	}
 
 	.bg-image {
-		position: absolute;
-		inset: -24px;
-		background-size: cover;
-		background-position: center;
-		background-repeat: no-repeat;
-		opacity: 1;
-	}
-
-	.bg-scrim {
-		position: absolute;
-		inset: 0;
-		background: radial-gradient(
-			ellipse 120% 80% at 50% 40%,
-			rgba(255, 255, 255, 0.06) 0%,
-			rgba(8, 10, 18, 0.35) 55%,
-			rgba(4, 6, 12, 0.55) 100%
-		);
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
 	}
 
 	.content {
 		position: relative;
 		z-index: 1;
-		min-height: 100dvh;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		padding: 2rem;
 	}
 </style>
