@@ -24,8 +24,8 @@
 		{type}
 		aria-label={ariaLabel}
 		class="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-tertiary text-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50 {className}"
-		in:fly={{ x: 12, duration: 200 }}
-		out:fly={{ x: 12, duration: 150 }}
+		in:fly={{ y: 8, duration: 200 }}
+		out:fly={{ y: 8, duration: 150 }}
 		{...buttonProps}
 	>
 		<span class="input-submit__icon">
