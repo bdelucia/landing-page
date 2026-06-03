@@ -4,5 +4,8 @@ import Icons from 'unplugin-icons/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [tailwindcss(), Icons({ compiler: 'svelte' }), sveltekit()]
+	plugins: [tailwindcss(), Icons({ compiler: 'svelte' }), sveltekit()],
+	ssr: {
+		noExternal: ['bits-ui', 'lucide-svelte']
+	}
 });

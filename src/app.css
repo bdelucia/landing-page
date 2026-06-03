@@ -1,5 +1,6 @@
 @import '@fontsource-variable/google-sans-flex/wght.css';
 @import 'tailwindcss';
+@import 'tw-animate-css';
 @import './lib/theme.css';
 
 @theme inline {
