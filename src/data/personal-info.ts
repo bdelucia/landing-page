@@ -6,8 +6,6 @@ export type {
 	PersonalSecrets,
 	PersonalConfig,
 	OpenWeatherConfig,
-	NewsApiConfig,
-	NewsApiCategory,
 	PlaidConfig,
 	PlaidEnvironment,
 	ApiSecrets

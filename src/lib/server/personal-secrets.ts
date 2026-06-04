@@ -5,7 +5,7 @@ export { personalSecrets };
 export type { PersonalSecrets };
 
 export {
-	isNewsApiConfigured,
+	getPlaidLinkedItems,
 	isOpenWeatherConfigured,
 	isPlaidConfigured,
 	isPlaidLinked,

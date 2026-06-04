@@ -15,10 +15,9 @@ Edit `src/data/personal-info.local.ts` with your name, welcome text, and any API
 - **`personalInfo`** — safe for UI (`displayName`, optional `welcomeMessage`). Import from `$data/personal-info`.
 - **`personalSecrets`** — server only. Optional objects per integration (omit to disable). Field docs and allowed values are in [`src/data/api-config.types.ts`](src/data/api-config.types.ts) (IDE hover on each property).
   - **`openWeather`** — `apiKey`, `zipCode`, `countryCode` (ISO alpha-2), `units` (`metric` | `imperial` | `standard`)
-  - **`newsApi`** — `apiKey`, `country` (lowercase ISO), `category` (7 headline categories; mainly `us`/`gb`), `pageSize` (1–100)
-  - **`plaid`** — `clientId`, `secret`, `environment`, `accessToken` (from Plaid Link / Quickstart), optional `itemId`
+  - **`plaid`** — `clientId`, `secret`, `environment`, `accessToken` (one linked institution; all accounts under it), optional `itemId`, or `items[]` for multiple banks (each with `accessToken` and optional `label`)
 
-Import secrets from `$lib/server/personal-secrets` in `+server.ts` / `+page.server.ts` only — not from `.svelte` files. Use `isOpenWeatherConfigured`, `isNewsApiConfigured`, `isPlaidConfigured`, and `isPlaidLinked` before calling each API.
+Import secrets from `$lib/server/personal-secrets` in `+server.ts` / `+page.server.ts` only — not from `.svelte` files. Use `isOpenWeatherConfigured`, `isPlaidConfigured`, and `isPlaidLinked` before calling each API.
 
 If `personal-info.local.ts` is missing, the app falls back to `personal-info.example.ts` so installs and CI still build.
 

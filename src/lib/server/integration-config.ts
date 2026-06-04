@@ -1,8 +1,8 @@
 import type {
-	NewsApiConfig,
 	OpenWeatherConfig,
 	PersonalSecrets,
-	PlaidConfig
+	PlaidConfig,
+	PlaidLinkedItem
 } from '$data/personal-info.types';
 
 function hasValue(value: string | undefined): value is string {
@@ -23,13 +23,6 @@ export function isOpenWeatherConfigured(
 	return !!config && hasValue(config.apiKey) && hasValue(config.zipCode);
 }
 
-export function isNewsApiConfigured(
-	secrets: PersonalSecrets
-): secrets is PersonalSecrets & { newsApi: NewsApiConfig } {
-	const config = secrets.newsApi;
-	return !!config && hasValue(config.apiKey);
-}
-
 export function isPlaidConfigured(
 	secrets: PersonalSecrets
 ): secrets is PersonalSecrets & { plaid: PlaidConfig } {
@@ -37,9 +30,20 @@ export function isPlaidConfigured(
 	return !!config && hasValue(config.clientId) && hasValue(config.secret);
 }
 
-/** Plaid transaction endpoints also need a stored access token on the linked Item */
+/** Linked Items with at least one access token (single `accessToken` or `items[]`). */
+export function getPlaidLinkedItems(plaid: PlaidConfig): PlaidLinkedItem[] {
+	if (plaid.items?.length) {
+		return plaid.items.filter((item) => hasValue(item.accessToken));
+	}
+	if (hasValue(plaid.accessToken)) {
+		return [{ accessToken: plaid.accessToken, itemId: plaid.itemId }];
+	}
+	return [];
+}
+
+/** Plaid transaction endpoints need at least one stored access token */
 export function isPlaidLinked(
 	secrets: PersonalSecrets
-): secrets is PersonalSecrets & { plaid: PlaidConfig & { accessToken: string } } {
-	return isPlaidConfigured(secrets) && hasValue(secrets.plaid.accessToken);
+): secrets is PersonalSecrets & { plaid: PlaidConfig } {
+	return isPlaidConfigured(secrets) && getPlaidLinkedItems(secrets.plaid).length > 0;
 }

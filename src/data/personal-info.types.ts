@@ -2,11 +2,10 @@ import type { ApiSecrets } from './api-config.types';
 
 export type {
 	ApiSecrets,
-	NewsApiConfig,
-	NewsApiCategory,
 	OpenWeatherConfig,
 	PlaidConfig,
-	PlaidEnvironment
+	PlaidEnvironment,
+	PlaidLinkedItem
 } from './api-config.types';
 
 /** Fields safe to use in pages and components (bundled for the browser). */

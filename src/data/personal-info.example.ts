@@ -21,17 +21,16 @@ export const personalSecrets: PersonalSecrets = {
 	// 	countryCode: 'US', // ISO 3166-1 alpha-2: US, GB, CA, …
 	// 	units: 'imperial' // metric | imperial | standard
 	// },
-	// newsApi: {
-	// 	apiKey: '', // https://newsapi.org/account
-	// 	country: 'us', // lowercase ISO country: us, gb, de, …
-	// 	category: 'general', // business | entertainment | general | health | science | sports | technology (mainly us/gb)
-	// 	pageSize: 5 // 1–100
-	// },
 	// plaid: {
 	// 	clientId: '',
 	// 	secret: '', // must match environment (sandbox vs production keys)
 	// 	environment: 'sandbox', // sandbox | development | production
-	// 	accessToken: '', // from Plaid Link / Quickstart
-	// 	itemId: '' // optional; same Item as accessToken
+	// 	accessToken: '', // one bank: single token for all accounts at that institution
+	// 	itemId: '', // optional; same Item as accessToken
+	// 	// Multiple banks: one entry per Link session (each with its own accessToken)
+	// 	// items: [
+	// 	// 	{ accessToken: '', label: 'Chase' },
+	// 	// 	{ accessToken: '', label: 'Amex' }
+	// 	// ]
 	// }
 };

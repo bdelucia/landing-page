@@ -55,30 +55,46 @@
 		<ul class="divide-y divide-border">
 			{#each transactions as transaction (transaction.id)}
 				{@const Icon = iconMap[transaction.icon]}
-				<li class="flex items-center gap-3 px-4 py-3.5 sm:px-5">
+				<li
+					class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3.5 sm:grid-cols-[2.5rem_minmax(0,1fr)_6.5rem_5.5rem_5.5rem] sm:gap-x-4 sm:px-5"
+				>
 					<div
-						class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface text-muted"
+						class="col-start-1 row-start-1 flex size-10 items-center justify-center rounded-lg bg-surface text-muted"
 						aria-hidden="true"
 					>
 						<Icon class="size-5" strokeWidth={1.75} />
 					</div>
 
-					<div class="min-w-0 flex-1">
+					<div class="col-start-2 row-start-1 min-w-0">
 						<p class="truncate font-medium text-primary">{transaction.merchant}</p>
 						<p class="truncate text-sm text-muted-foreground">{transaction.category}</p>
+						{#if transaction.bankLabel}
+							<p class="mt-0.5 truncate text-xs text-muted-foreground sm:hidden">
+								{transaction.bankLabel}
+							</p>
+						{/if}
 						<p class="mt-0.5 text-xs text-muted-foreground sm:hidden">{transaction.dateLabel}</p>
 					</div>
 
-					<p class="hidden shrink-0 text-sm text-muted-foreground sm:block">
-						{transaction.dateLabel}
-					</p>
-
 					<p
-						class="shrink-0 text-right text-sm font-medium tabular-nums {transaction.isIncome
+						class="col-start-3 row-start-1 self-center text-end text-sm font-medium tabular-nums sm:col-start-5 sm:row-start-1 sm:text-start {transaction.isIncome
 							? 'text-income'
 							: 'text-primary'}"
 					>
 						{transaction.amountLabel}
+					</p>
+
+					<p
+						class="col-start-3 row-start-1 hidden truncate text-start text-sm text-muted-foreground sm:col-start-3 sm:block"
+						title={transaction.bankLabel}
+					>
+						{transaction.bankLabel}
+					</p>
+
+					<p
+						class="col-start-4 row-start-1 hidden text-start text-sm text-muted-foreground sm:block"
+					>
+						{transaction.dateLabel}
 					</p>
 				</li>
 			{/each}

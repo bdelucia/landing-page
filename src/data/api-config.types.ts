@@ -1,7 +1,6 @@
 /**
  * Integration credentials and options (server-only via `personalSecrets`).
  * @see https://openweathermap.org/current — OpenWeather
- * @see https://newsapi.org/docs/endpoints/top-headlines — NewsAPI
  * @see https://plaid.com/docs/api/#api-host — Plaid
  */
 
@@ -29,40 +28,30 @@ export type OpenWeatherConfig = {
 	units?: 'metric' | 'imperial' | 'standard';
 };
 
-/** NewsAPI top headlines — https://newsapi.org/docs/endpoints/top-headlines */
-export type NewsApiConfig = {
-	/** API key from https://newsapi.org/account */
-	apiKey: string;
+/**
+ * One institution linked through Plaid Link (one login → often several accounts).
+ * @see https://plaid.com/docs/link/#token-exchange-flow
+ */
+export type PlaidLinkedItem = {
+	/** `access_token` from Link `onSuccess` for this Item */
+	accessToken: string;
+	/** `item_id` for the same Item (optional) */
+	itemId?: string;
 	/**
-	 * 2-letter ISO 3166-1 country code (lowercase), e.g. `us`, `gb`, `de`, `au`.
-	 * Full list: https://newsapi.org/docs/endpoints/top-headlines
+	 * Shown in the UI when you link more than one Item (e.g. `"Chase"`, `"Amex"`).
+	 * Omit if you only have a single linked institution.
 	 */
-	country?: string;
-	/**
-	 * Headline category. **Only supported for some countries** (e.g. `us`, `gb`); ignored elsewhere.
-	 * Allowed values:
-	 * `business` | `entertainment` | `general` | `health` | `science` | `sports` | `technology`
-	 */
-	category?: NewsApiCategory;
-	/**
-	 * Number of articles to return (1–100).
-	 * @default 20 on NewsAPI if omitted
-	 */
-	pageSize?: number;
+	label?: string;
 };
-
-export type NewsApiCategory =
-	| 'business'
-	| 'entertainment'
-	| 'general'
-	| 'health'
-	| 'science'
-	| 'sports'
-	| 'technology';
 
 /**
  * Plaid — https://plaid.com/docs/
- * Set `accessToken` (and optionally `itemId`) after linking an Item via Plaid Link or Quickstart.
+ * Set tokens after linking via Plaid Link or Quickstart.
+ *
+ * **Multiple accounts at one bank:** one `accessToken` / one `items` entry — Plaid returns
+ * transactions for every account under that Item; each row is tagged via `account_id`.
+ *
+ * **Multiple banks:** add one `items` entry per Link session (each with its own `accessToken`).
  */
 export type PlaidConfig = {
 	/** Dashboard → Team Settings → Keys */
@@ -76,10 +65,14 @@ export type PlaidConfig = {
 	 * - `production` — live user data
 	 */
 	environment: PlaidEnvironment;
-	/** `access_token` for the linked Item. Required for `/transactions/get` and similar. */
+	/**
+	 * Single linked Item (simple setup). Use `items` instead when you have multiple banks.
+	 */
 	accessToken?: string;
-	/** `item_id` for the same Item (optional; useful for `/item/get` or removing the Item). */
+	/** `item_id` for the same Item as `accessToken` (optional) */
 	itemId?: string;
+	/** One entry per linked institution when you have more than one `access_token` */
+	items?: PlaidLinkedItem[];
 };
 
 export type PlaidEnvironment = 'sandbox' | 'development' | 'production';
@@ -87,8 +80,6 @@ export type PlaidEnvironment = 'sandbox' | 'development' | 'production';
 export type ApiSecrets = {
 	/** Omit this object (or leave required fields blank) to disable OpenWeather */
 	openWeather?: OpenWeatherConfig;
-	/** Omit this object (or leave `apiKey` blank) to disable NewsAPI */
-	newsApi?: NewsApiConfig;
 	/** Omit this object (or leave credentials blank) to disable Plaid */
 	plaid?: PlaidConfig;
 };
