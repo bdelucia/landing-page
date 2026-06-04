@@ -11,7 +11,7 @@ export type {
 /** Fields safe to use in pages and components (bundled for the browser). */
 export type PersonalInfo = {
 	displayName: string;
-	/** Overrides the default “welcome back {displayName}…” heading. */
+	/** Overrides the default time-of-day greeting (Mountain Time). */
 	welcomeMessage?: string;
 };
 

@@ -1,3 +1,4 @@
+import { formatTimeOfDayGreeting } from '$lib/time-of-day-greeting';
 import { personalInfo as info } from '$personal-config';
 import type { PersonalInfo } from './personal-info.types';
 
@@ -18,5 +19,5 @@ export function getWelcomeMessage(profile: PersonalInfo = personalInfo): string 
 	if (profile.welcomeMessage?.trim()) {
 		return profile.welcomeMessage.trim();
 	}
-	return `welcome back ${profile.displayName}...`;
+	return formatTimeOfDayGreeting(profile.displayName);
 }

@@ -11,6 +11,8 @@
 	import ThunderstormIcon from '~icons/material-symbols/thunderstorm-rounded';
 	import FoggyIcon from '~icons/material-symbols/foggy';
 	import DrizzleIcon from '~icons/material-symbols/grain';
+	import ArrowUpIcon from '~icons/material-symbols/arrow-upward-alt-rounded';
+	import ArrowDownIcon from '~icons/material-symbols/arrow-downward-alt-rounded';
 
 	let {
 		weather = null,
@@ -40,14 +42,21 @@
 	<div
 		class="flex items-center gap-3 rounded-full border border-border bg-background px-4 py-2 text-primary shadow-lg sm:px-5 sm:py-2.5"
 		role="status"
-		aria-label="{weather.description} in {weather.location}, {weather.temperature}"
+		aria-label="{weather.description} in {weather.location}, {weather.temperature}, high {weather.high}, low {weather.low}"
 	>
 		<WeatherIcon aria-hidden="true" class="size-6 shrink-0 text-primary" />
 		<div class="flex min-w-0 flex-col gap-0.5 leading-tight">
 			<span class="text-sm font-medium tabular-nums">{weather.temperature}</span>
-			<span class="hidden whitespace-nowrap text-xs text-muted-foreground sm:block">
-				{weather.description} · {weather.location}
-			</span>
+			<div class="hidden items-center gap-2 whitespace-nowrap text-xs sm:flex">
+				<span class="inline-flex items-center gap-0.5 text-[#fb923c]">
+					<ArrowUpIcon aria-hidden="true" class="size-3.5 shrink-0" />
+					<span class="tabular-nums">{weather.high}</span>
+				</span>
+				<span class="inline-flex items-center gap-0.5 text-[#6bb8ff]">
+					<span class="tabular-nums">{weather.low}</span>
+					<ArrowDownIcon aria-hidden="true" class="size-3.5 shrink-0" />
+				</span>
+			</div>
 		</div>
 	</div>
 {:else if error}

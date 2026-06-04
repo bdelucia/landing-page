@@ -1,4 +1,4 @@
-import azfcuIcon from '$lib/assets/logos/azfcu.svg';
+import azfcuIcon from '$lib/assets/logos/azfcu.jpeg';
 import fidelityIcon from '$lib/assets/logos/fidelity.jpeg';
 import robinhoodIcon from '$lib/assets/logos/robinhood.png';
 import type { AccountBalanceKey } from '$lib/account-balances';

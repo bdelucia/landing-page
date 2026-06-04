@@ -77,7 +77,7 @@ function transactionSortKey(transaction: Transaction): string {
 	return transaction.datetime ?? `${transaction.date}T12:00:00`;
 }
 
-function mapTransaction(transaction: Transaction): TransactionItem {
+function mapTransaction(transaction: Transaction, sourceId: string): TransactionItem {
 	const category = formatCategoryLabel(transaction);
 	const isIncome = transaction.amount < 0;
 	const amountLabel = isIncome
@@ -86,6 +86,7 @@ function mapTransaction(transaction: Transaction): TransactionItem {
 
 	return {
 		id: transaction.transaction_id,
+		sourceId,
 		merchant: transaction.merchant_name ?? transaction.name,
 		category,
 		dateLabel: formatTransactionDate(transaction.date, transaction.datetime),
@@ -102,8 +103,12 @@ function sortByRecency(transactions: Transaction[]): Transaction[] {
 	);
 }
 
-function mapTransactions(transactions: Transaction[]): TransactionItem[] {
-	return transactions.map((transaction) => mapTransaction(transaction));
+function mapTransactions(transactions: Transaction[], sourceId: string): TransactionItem[] {
+	return transactions.map((transaction) => mapTransaction(transaction, sourceId));
+}
+
+function sortTransactionItems(transactions: TransactionItem[]): TransactionItem[] {
+	return [...transactions].sort((a, b) => b.sortDate.localeCompare(a.sortDate));
 }
 
 async function fetchTransactionsForItem(
@@ -112,6 +117,7 @@ async function fetchTransactionsForItem(
 	count: number
 ): Promise<{ transactions: TransactionItem[]; error: string | null }> {
 	const client = createPlaidClient(plaid);
+	const sourceId = item.itemId ?? item.accessToken;
 
 	try {
 		const transactionsResponse = await client.transactionsGet({
@@ -124,7 +130,7 @@ async function fetchTransactionsForItem(
 		const sorted = sortByRecency(transactionsResponse.data.transactions);
 
 		return {
-			transactions: mapTransactions(sorted),
+			transactions: mapTransactions(sorted, sourceId),
 			error: null
 		};
 	} catch (error) {
@@ -149,14 +155,34 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = personalSecrets;
-	const [primaryItem] = getPlaidLinkedItems(plaid);
+	const linkedItems = getPlaidLinkedItems(plaid);
 
-	if (!primaryItem) {
+	if (linkedItems.length === 0) {
 		return {
 			transactions: [],
 			error: 'Plaid access token is not set in personal-info.local.ts'
 		};
 	}
 
-	return fetchTransactionsForItem(plaid, primaryItem, count);
+	const results = await Promise.all(
+		linkedItems.map((item) => fetchTransactionsForItem(plaid, item, count))
+	);
+
+	const transactions = sortTransactionItems(results.flatMap((result) => result.transactions));
+	const errors = results
+		.map((result) => result.error)
+		.filter((message): message is string => !!message);
+
+	if (transactions.length === 0 && errors.length > 0) {
+		return { transactions: [], error: errors[0] };
+	}
+
+	if (errors.length > 0) {
+		return {
+			transactions,
+			error: `Some transactions could not be loaded: ${errors.join('; ')}`
+		};
+	}
+
+	return { transactions, error: null };
 }

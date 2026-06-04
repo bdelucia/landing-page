@@ -11,7 +11,7 @@ import {
 
 type OpenWeatherCurrentResponse = {
 	name: string;
-	main: { temp: number };
+	main: { temp: number; temp_min: number; temp_max: number };
 	weather: Array<{
 		id: number;
 		description: string;
@@ -75,6 +75,8 @@ export async function fetchCurrentWeather(): Promise<FetchWeatherResult> {
 		return {
 			weather: {
 				temperature: formatTemperature(data.main.temp, units),
+				high: formatTemperature(data.main.temp_max, units),
+				low: formatTemperature(data.main.temp_min, units),
 				description: capitalizeDescription(condition.description),
 				location: data.name,
 				icon: weatherIconFromCondition(condition.id, condition.icon)

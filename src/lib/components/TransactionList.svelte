@@ -31,6 +31,24 @@
 		tv: TvIcon,
 		default: CircleDollarSignIcon
 	};
+
+	const displayLimit = 5;
+
+	let selectedAccountId = $state<string | null>(null);
+
+	function toggleAccountFilter(accountId: string) {
+		selectedAccountId = selectedAccountId === accountId ? null : accountId;
+	}
+
+	const visibleTransactions = $derived.by(() => {
+		const pool = selectedAccountId
+			? transactions.filter((transaction) => transaction.sourceId === selectedAccountId)
+			: transactions;
+
+		return [...pool]
+			.sort((a, b) => b.sortDate.localeCompare(a.sortDate))
+			.slice(0, displayLimit);
+	});
 </script>
 
 <section
@@ -46,16 +64,23 @@
 			</h2>
 			<p class="mt-0.5 text-sm text-muted-foreground">Your latest account activity.</p>
 		</div>
-		<AccountBalances accounts={accounts} error={balancesError} compact class="shrink-0" />
+		<AccountBalances
+			accounts={accounts}
+			error={balancesError}
+			{selectedAccountId}
+			onAccountSelect={toggleAccountFilter}
+			compact
+			class="shrink-0"
+		/>
 	</header>
 
 	{#if error}
 		<p class="px-5 py-6 text-sm text-muted-foreground" role="status">{error}</p>
-	{:else if transactions.length === 0}
+	{:else if visibleTransactions.length === 0}
 		<p class="px-5 py-6 text-sm text-muted-foreground" role="status">No transactions to show.</p>
 	{:else}
 		<ul class="divide-y divide-border">
-			{#each transactions as transaction (transaction.id)}
+			{#each visibleTransactions as transaction (transaction.id)}
 				{@const Icon = iconMap[transaction.icon]}
 				<li
 					class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3.5 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5.5rem] sm:gap-x-4 sm:px-5"

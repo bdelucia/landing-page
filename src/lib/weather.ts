@@ -15,6 +15,8 @@ export type WeatherIconKey =
 
 export type WeatherDisplay = {
 	temperature: string;
+	high: string;
+	low: string;
 	description: string;
 	location: string;
 	icon: WeatherIconKey;

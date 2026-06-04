@@ -6,11 +6,15 @@
 		accounts = [],
 		error = null,
 		compact = false,
+		selectedAccountId = null,
+		onAccountSelect,
 		class: className = ''
 	}: {
 		accounts?: AccountBalanceItem[];
 		error?: string | null;
 		compact?: boolean;
+		selectedAccountId?: string | null;
+		onAccountSelect?: (accountId: string) => void;
 		class?: string;
 	} = $props();
 </script>
@@ -44,6 +48,8 @@
 					label={account.label}
 					balanceLabel={account.balanceLabel}
 					error={account.error}
+					selected={selectedAccountId === account.id}
+					onselect={() => onAccountSelect?.(account.id)}
 					{compact}
 				/>
 			{/each}

@@ -8,6 +8,8 @@ export type TransactionIcon =
 
 export type TransactionItem = {
 	id: string;
+	/** Matches `AccountBalanceItem.id` for the linked Plaid Item */
+	sourceId: string;
 	merchant: string;
 	category: string;
 	dateLabel: string;
