@@ -61,9 +61,12 @@ npm run dev -- --open
 To create a production version of your app:
 
 ```sh
-npm run build
+pnpm run build
+pnpm run preview   # smoke-test the Node server (adapter-node)
 ```
 
-You can preview the production build with `npm run preview`.
+## Deploy (Docker on Raspberry Pi + Tailscale)
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+The project uses `@sveltejs/adapter-node` with a `Dockerfile` and `docker-compose.yml`. Access is intended **only over Tailscale**, not the public web.
+
+See **[docs/deploy-raspberry-pi.md](docs/deploy-raspberry-pi.md)** for setup, secrets, Tailscale Serve, and reboot behavior.

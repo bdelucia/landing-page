@@ -1,0 +1,20 @@
+# Personal landing page — bind to localhost on the Pi; reach via Tailscale Serve or tailnet IP.
+# See docs/deploy-raspberry-pi.md
+
+services:
+  landing-page:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: landing-page:latest
+    container_name: landing-page
+    restart: unless-stopped
+    ports:
+      # Not exposed on LAN/WAN — only this machine. Use Tailscale Serve → localhost:3000
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      # Optional: set in project `.env` when using Tailscale Serve (see .env.docker.example)
+      ORIGIN: ${ORIGIN:-}
