@@ -10,8 +10,9 @@ services:
     container_name: landing-page
     restart: unless-stopped
     ports:
-      # Not exposed on LAN/WAN — only this machine. Use Tailscale Serve → localhost:3000
-      - "127.0.0.1:3000:3000"
+      # Host port (left) defaults to 3001 — 3000 is often taken on a Pi. Override in .env: HOST_PORT=3000
+      # Tailscale Serve must target the same host port, e.g. http://127.0.0.1:3001
+      - "127.0.0.1:${HOST_PORT:-3001}:3000"
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

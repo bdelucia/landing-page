@@ -36,7 +36,7 @@ Check logs:
 docker compose logs -f landing-page
 ```
 
-On the Pi, the app is at `http://127.0.0.1:3000` only (not exposed on your LAN IP by default).
+On the Pi, the app is at `http://127.0.0.1:3001` by default (host port; container uses 3000 inside). Not exposed on your LAN IP.
 
 ## 3. Expose via Tailscale (recommended)
 
@@ -45,7 +45,7 @@ On the Pi, the app is at `http://127.0.0.1:3000` only (not exposed on your LAN I
 On the Pi:
 
 ```sh
-sudo tailscale serve --bg http://127.0.0.1:3000
+sudo tailscale serve --bg http://127.0.0.1:3001
 ```
 
 In the [Tailscale admin console](https://login.tailscale.com/admin/machines), open your Pi → **Serve** and note the HTTPS URL (e.g. `https://pi.your-tailnet.ts.net`).
@@ -83,7 +83,7 @@ Ensure Tailscale starts at boot:
 sudo systemctl enable tailscaled
 ```
 
-Re-apply Serve after reboot if you use it (or script `tailscale serve` in a small systemd unit).
+Re-apply Serve after reboot if you use it (or script `tailscale serve` in a small systemd unit). Use the same port as compose (default **3001**).
 
 ## 5. Updates
 
@@ -100,12 +100,33 @@ docker compose up -d --build
 - Anyone on your tailnet can reach Serve unless you use [Tailscale ACLs](https://tailscale.com/kb/1018/acls) to restrict the Pi.
 - Rebuild the image when rotating Plaid tokens or API keys in `personal-info.local.ts`.
 
+## Port 3000 already in use
+
+Compose maps **host** `3001` → container `3000` by default so this does not clash with other services on 3000.
+
+To see what holds 3000:
+
+```sh
+sudo ss -tlnp | grep ':3000 '
+docker ps --format 'table {{.Names}}\t{{.Ports}}' | grep 3000
+```
+
+Stop a leftover container if needed:
+
+```sh
+docker stop landing-page   # or the name shown in docker ps
+docker compose up -d
+```
+
+To use host port 3000 anyway, set `HOST_PORT=3000` in `.env` after freeing the port.
+
 ## Troubleshooting
 
 | Issue | What to try |
 |--------|-------------|
 | Build uses example config (no weather/Plaid) | Confirm `personal-info.local.ts` exists on the Pi **before** `docker compose build` |
 | `ERR_PNPM_IGNORED_BUILDS` / esbuild | Ensure `pnpm-workspace.yaml` is in the repo (`allowBuilds.esbuild: true`); pull latest and rebuild |
+| `port is already allocated` (3000) | Something else uses that port — see below; default host port is now **3001** |
 | 403 / CSRF errors behind Serve | Set `ORIGIN` to the exact HTTPS Serve URL |
 | Slow first build on Pi | Normal on ARM; subsequent builds use cache |
 | Out of disk | `docker system prune` (removes unused images) |
