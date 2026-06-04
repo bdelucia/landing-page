@@ -21,7 +21,7 @@
 	rel={external ? 'noopener noreferrer' : undefined}
 >
 	<span
-		class="inline-flex size-16 items-center justify-center rounded-[12px] border border-border bg-background shadow-lg transition-[border-color] duration-200 ease-in-out group-hover:border-secondary group-focus-visible:border-secondary"
+		class="inline-flex size-16 items-center justify-center rounded-[12px] border-2 border-border bg-background shadow-lg transition-[border-color] duration-200 ease-in-out group-hover:border-secondary group-focus-visible:border-secondary"
 	>
 		<img src={icon} alt="" width="40" height="40" class="size-10 object-contain" aria-hidden="true" />
 	</span>

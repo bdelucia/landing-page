@@ -10,8 +10,6 @@ export type TransactionItem = {
 	id: string;
 	merchant: string;
 	category: string;
-	/** Institution label from Plaid config or Plaid institution name */
-	bankLabel: string;
 	dateLabel: string;
 	/** ISO timestamp for sorting when merging multiple Plaid Items (not shown in UI) */
 	sortDate: string;

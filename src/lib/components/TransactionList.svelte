@@ -1,5 +1,7 @@
 <script lang="ts">
+	import type { AccountBalanceItem } from '$lib/account-balances';
 	import type { TransactionIcon, TransactionItem } from '$lib/transactions';
+	import AccountBalances from '$lib/components/AccountBalances.svelte';
 	import CoffeeIcon from '@lucide/svelte/icons/coffee';
 	import ShoppingCartIcon from '@lucide/svelte/icons/shopping-cart';
 	import WalletIcon from '@lucide/svelte/icons/wallet';
@@ -9,11 +11,15 @@
 
 	let {
 		transactions = [],
+		accounts = [],
 		error = null,
+		balancesError = null,
 		class: className = ''
 	}: {
 		transactions?: TransactionItem[];
+		accounts?: AccountBalanceItem[];
 		error?: string | null;
+		balancesError?: string | null;
 		class?: string;
 	} = $props();
 
@@ -31,20 +37,16 @@
 	class="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-background shadow-lg {className}"
 	aria-labelledby="recent-transactions-heading"
 >
-	<header class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
-		<div>
+	<header
+		class="flex shrink-0 flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-border px-5 py-4"
+	>
+		<div class="min-w-0">
 			<h2 id="recent-transactions-heading" class="text-lg font-semibold text-primary">
 				Recent Transactions
 			</h2>
 			<p class="mt-0.5 text-sm text-muted-foreground">Your latest account activity.</p>
 		</div>
-		<button
-			type="button"
-			class="shrink-0 rounded-full border border-border-strong px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-secondary hover:text-primary"
-			disabled
-		>
-			View All
-		</button>
+		<AccountBalances accounts={accounts} error={balancesError} compact class="shrink-0" />
 	</header>
 
 	{#if error}
@@ -56,7 +58,7 @@
 			{#each transactions as transaction (transaction.id)}
 				{@const Icon = iconMap[transaction.icon]}
 				<li
-					class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3.5 sm:grid-cols-[2.5rem_minmax(0,1fr)_6.5rem_5.5rem_5.5rem] sm:gap-x-4 sm:px-5"
+					class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3.5 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5.5rem] sm:gap-x-4 sm:px-5"
 				>
 					<div
 						class="col-start-1 row-start-1 flex size-10 items-center justify-center rounded-lg bg-surface text-muted"
@@ -68,33 +70,21 @@
 					<div class="col-start-2 row-start-1 min-w-0">
 						<p class="truncate font-medium text-primary">{transaction.merchant}</p>
 						<p class="truncate text-sm text-muted-foreground">{transaction.category}</p>
-						{#if transaction.bankLabel}
-							<p class="mt-0.5 truncate text-xs text-muted-foreground sm:hidden">
-								{transaction.bankLabel}
-							</p>
-						{/if}
 						<p class="mt-0.5 text-xs text-muted-foreground sm:hidden">{transaction.dateLabel}</p>
 					</div>
 
 					<p
-						class="col-start-3 row-start-1 self-center text-end text-sm font-medium tabular-nums sm:col-start-5 sm:row-start-1 sm:text-start {transaction.isIncome
+						class="col-start-3 row-start-1 hidden text-start text-sm text-muted-foreground sm:block"
+					>
+						{transaction.dateLabel}
+					</p>
+
+					<p
+						class="col-start-3 row-start-1 self-center text-end text-sm font-medium tabular-nums sm:col-start-4 sm:row-start-1 sm:text-start {transaction.isIncome
 							? 'text-income'
 							: 'text-primary'}"
 					>
 						{transaction.amountLabel}
-					</p>
-
-					<p
-						class="col-start-3 row-start-1 hidden truncate text-start text-sm text-muted-foreground sm:col-start-3 sm:block"
-						title={transaction.bankLabel}
-					>
-						{transaction.bankLabel}
-					</p>
-
-					<p
-						class="col-start-4 row-start-1 hidden text-start text-sm text-muted-foreground sm:block"
-					>
-						{transaction.dateLabel}
 					</p>
 				</li>
 			{/each}

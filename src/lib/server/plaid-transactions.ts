@@ -1,4 +1,4 @@
-import { CountryCode, type Transaction } from 'plaid';
+import type { Transaction } from 'plaid';
 import { personalSecrets } from '$lib/server/personal-secrets';
 import { getPlaidLinkedItems, isPlaidLinked } from '$lib/server/integration-config';
 import { createPlaidClient, formatPlaidApiError } from '$lib/server/plaid';
@@ -77,29 +77,7 @@ function transactionSortKey(transaction: Transaction): string {
 	return transaction.datetime ?? `${transaction.date}T12:00:00`;
 }
 
-async function resolveBankLabel(
-	client: ReturnType<typeof createPlaidClient>,
-	item: PlaidLinkedItem
-): Promise<string> {
-	const configured = item.label?.trim();
-	if (configured) return configured;
-
-	try {
-		const itemResponse = await client.itemGet({ access_token: item.accessToken });
-		const institutionId = itemResponse.data.item.institution_id;
-		if (!institutionId) return '';
-
-		const institutionResponse = await client.institutionsGetById({
-			institution_id: institutionId,
-			country_codes: [CountryCode.Us]
-		});
-		return institutionResponse.data.institution.name;
-	} catch {
-		return '';
-	}
-}
-
-function mapTransaction(transaction: Transaction, bankLabel: string): TransactionItem {
+function mapTransaction(transaction: Transaction): TransactionItem {
 	const category = formatCategoryLabel(transaction);
 	const isIncome = transaction.amount < 0;
 	const amountLabel = isIncome
@@ -110,7 +88,6 @@ function mapTransaction(transaction: Transaction, bankLabel: string): Transactio
 		id: transaction.transaction_id,
 		merchant: transaction.merchant_name ?? transaction.name,
 		category,
-		bankLabel,
 		dateLabel: formatTransactionDate(transaction.date, transaction.datetime),
 		sortDate: transactionSortKey(transaction),
 		amountLabel,
@@ -125,8 +102,8 @@ function sortByRecency(transactions: Transaction[]): Transaction[] {
 	);
 }
 
-function mapTransactions(transactions: Transaction[], bankLabel: string): TransactionItem[] {
-	return transactions.map((transaction) => mapTransaction(transaction, bankLabel));
+function mapTransactions(transactions: Transaction[]): TransactionItem[] {
+	return transactions.map((transaction) => mapTransaction(transaction));
 }
 
 async function fetchTransactionsForItem(
@@ -137,20 +114,17 @@ async function fetchTransactionsForItem(
 	const client = createPlaidClient(plaid);
 
 	try {
-		const [bankLabel, transactionsResponse] = await Promise.all([
-			resolveBankLabel(client, item),
-			client.transactionsGet({
-				access_token: item.accessToken,
-				start_date: toDateString(90),
-				end_date: toDateString(0),
-				options: { count, offset: 0 }
-			})
-		]);
+		const transactionsResponse = await client.transactionsGet({
+			access_token: item.accessToken,
+			start_date: toDateString(90),
+			end_date: toDateString(0),
+			options: { count, offset: 0 }
+		});
 
 		const sorted = sortByRecency(transactionsResponse.data.transactions);
 
 		return {
-			transactions: mapTransactions(sorted, bankLabel),
+			transactions: mapTransactions(sorted),
 			error: null
 		};
 	} catch (error) {
@@ -175,27 +149,14 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = personalSecrets;
-	const linkedItems = getPlaidLinkedItems(plaid);
-	const results = await Promise.all(
-		linkedItems.map((item) => fetchTransactionsForItem(plaid, item, count))
-	);
+	const [primaryItem] = getPlaidLinkedItems(plaid);
 
-	const errors = results.map((result) => result.error).filter((message): message is string => !!message);
-	const transactions = results
-		.flatMap((result) => result.transactions)
-		.sort((a, b) => b.sortDate.localeCompare(a.sortDate))
-		.slice(0, count);
-
-	if (transactions.length === 0 && errors.length > 0) {
-		return { transactions: [], error: errors[0] };
-	}
-
-	if (errors.length > 0 && transactions.length > 0) {
+	if (!primaryItem) {
 		return {
-			transactions,
-			error: `Some accounts could not be loaded: ${errors.join('; ')}`
+			transactions: [],
+			error: 'Plaid access token is not set in personal-info.local.ts'
 		};
 	}
 
-	return { transactions, error: null };
+	return fetchTransactionsForItem(plaid, primaryItem, count);
 }
