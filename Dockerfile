@@ -4,12 +4,16 @@
 
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
-RUN corepack enable
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN corepack enable && corepack prepare pnpm@10.22.0 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# No svelte.config.js yet — skip lifecycle scripts (prepare / svelte-kit sync)
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM deps AS build
+WORKDIR /app
 COPY . .
+# Full tree present: allow esbuild postinstall (allowBuilds in pnpm-workspace.yaml) + prepare
+RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 FROM node:22-bookworm-slim AS runtime

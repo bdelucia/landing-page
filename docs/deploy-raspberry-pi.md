@@ -105,6 +105,7 @@ docker compose up -d --build
 | Issue | What to try |
 |--------|-------------|
 | Build uses example config (no weather/Plaid) | Confirm `personal-info.local.ts` exists on the Pi **before** `docker compose build` |
+| `ERR_PNPM_IGNORED_BUILDS` / esbuild | Ensure `pnpm-workspace.yaml` is in the repo (`allowBuilds.esbuild: true`); pull latest and rebuild |
 | 403 / CSRF errors behind Serve | Set `ORIGIN` to the exact HTTPS Serve URL |
 | Slow first build on Pi | Normal on ARM; subsequent builds use cache |
 | Out of disk | `docker system prune` (removes unused images) |
