@@ -36,6 +36,7 @@
 	/* Surfaces (cards, inputs) lifted slightly above background */
 	--color-surface: #2e2e45;
 	--color-surface-raised: #363652;
+	--color-income: #3ecf8e;
 
 	--radius-sm: 0.375rem;
 	--radius-md: 0.5rem;

@@ -19,6 +19,9 @@ Thumbs.db
 !.env.example
 !.env.test
 
+# Local profile (copy from personal-info.example.ts)
+src/data/personal-info.local.ts
+
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*

@@ -3,8 +3,14 @@
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import geminiIcon from '$lib/assets/logos/Google_Gemini_icon_2025.svg';
 	import { sendToGemini } from '$lib/send-to-gemini';
+	import { getWelcomeMessage } from '$data/personal-info';
 	import { Input, InputIcon, InputSubmit } from '$lib/components/input/index.js';
+	import TransactionList from '$lib/components/TransactionList.svelte';
 	import SettingsIcon from '~icons/material-symbols/settings-rounded';
+
+	let { data } = $props();
+
+	const welcomeHeading = getWelcomeMessage();
 
 	let prompt = $state('');
 	let sheetOpen = $state(false);
@@ -29,29 +35,29 @@
 	}
 </script>
 
-<div class="flex h-full w-full flex-col">
+<div class="flex h-full min-h-0 w-full flex-col">
 	<div class="flex shrink-0 justify-end">
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger
-				class="inline-flex size-10 items-center justify-center rounded-full border-2 border-transparent bg-surface-raised text-primary transition-[border-color] duration-200 ease-in-out hover:border-secondary focus-visible:border-secondary data-[state=open]:border-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+				class="inline-flex size-10 items-center justify-center rounded-full border-2 border-transparent bg-background text-primary transition-[border-color] duration-200 ease-in-out hover:border-secondary focus-visible:border-secondary data-[state=open]:border-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
 				aria-label="Settings"
 			>
 				<SettingsIcon aria-hidden="true" class="size-6" />
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content
-					class="min-w-40 rounded-lg border border-border bg-surface-raised p-1 text-sm text-primary shadow-lg outline-none"
+					class="min-w-40 rounded-lg border border-border bg-background p-1 text-sm text-primary shadow-lg outline-none"
 					sideOffset={8}
 					align="end"
 				>
 					<DropdownMenu.Item
-						class="flex cursor-default select-none items-center rounded-md px-3 py-2 outline-none focus-visible:outline-none data-highlighted:bg-surface"
+						class="flex cursor-default select-none items-center rounded-md px-3 py-2 outline-none focus-visible:outline-none data-highlighted:bg-surface-raised"
 						onSelect={() => openSettingsPanel('theming')}
 					>
 						Theming
 					</DropdownMenu.Item>
 					<DropdownMenu.Item
-						class="flex cursor-default select-none items-center rounded-md px-3 py-2 outline-none focus-visible:outline-none data-highlighted:bg-surface"
+						class="flex cursor-default select-none items-center rounded-md px-3 py-2 outline-none focus-visible:outline-none data-highlighted:bg-surface-raised"
 						onSelect={() => openSettingsPanel('configuration')}
 					>
 						Configuration
@@ -61,10 +67,10 @@
 		</DropdownMenu.Root>
 	</div>
 
-	<div class="flex flex-1 flex-col items-center justify-center px-4">
+	<div class="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-4">
 		<div class="flex w-full max-w-3xl flex-col items-center gap-8">
 			<h1 class="text-center text-3xl font-medium text-primary sm:text-4xl">
-				welcome back Bobbeh...
+				{welcomeHeading}
 			</h1>
 
 			<form class="w-full" onsubmit={handleSubmit}>
@@ -77,6 +83,12 @@
 					{/snippet}
 				</Input>
 			</form>
+
+			<TransactionList
+				class="w-full"
+				transactions={data.transactions}
+				error={data.transactionsError}
+			/>
 		</div>
 	</div>
 </div>

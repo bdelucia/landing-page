@@ -1,5 +1,13 @@
 import adapter from '@sveltejs/adapter-auto';
-import { relative, sep } from 'node:path';
+import { existsSync } from 'node:fs';
+import { relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = fileURLToPath(new URL('.', import.meta.url));
+const personalConfigLocal = resolve(root, 'src/data/personal-info.local.ts');
+const personalConfigResolved = existsSync(personalConfigLocal)
+	? personalConfigLocal
+	: resolve(root, 'src/data/personal-info.example.ts');
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -17,7 +25,12 @@ const config = {
 		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
 		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-		adapter: adapter()
+		adapter: adapter(),
+		alias: {
+			$data: resolve(root, 'src/data'),
+			// Not under $data — Vite would resolve $data/personal-config as src/data/personal-config
+			'$personal-config': personalConfigResolved
+		}
 	}
 };
 

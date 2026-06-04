@@ -2,6 +2,26 @@
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
+## Personal info (local config)
+
+After cloning, copy the example file and edit it for yourself:
+
+```sh
+cp src/data/personal-info.example.ts src/data/personal-info.local.ts
+```
+
+Edit `src/data/personal-info.local.ts` with your name, welcome text, and any API blocks you use. That file is **gitignored** so secrets are not committed.
+
+- **`personalInfo`** — safe for UI (`displayName`, optional `welcomeMessage`). Import from `$data/personal-info`.
+- **`personalSecrets`** — server only. Optional objects per integration (omit to disable). Field docs and allowed values are in [`src/data/api-config.types.ts`](src/data/api-config.types.ts) (IDE hover on each property).
+  - **`openWeather`** — `apiKey`, `zipCode`, `countryCode` (ISO alpha-2), `units` (`metric` | `imperial` | `standard`)
+  - **`newsApi`** — `apiKey`, `country` (lowercase ISO), `category` (7 headline categories; mainly `us`/`gb`), `pageSize` (1–100)
+  - **`plaid`** — `clientId`, `secret`, `environment`, `accessToken` (from Plaid Link / Quickstart), optional `itemId`
+
+Import secrets from `$lib/server/personal-secrets` in `+server.ts` / `+page.server.ts` only — not from `.svelte` files. Use `isOpenWeatherConfigured`, `isNewsApiConfigured`, `isPlaidConfigured`, and `isPlaidLinked` before calling each API.
+
+If `personal-info.local.ts` is missing, the app falls back to `personal-info.example.ts` so installs and CI still build.
+
 ## Gemini integration
 
 Submitting a prompt from this landing page opens `https://gemini.google.com/app?q=…` with your text in the query string. Google Gemini does not use that parameter on its own—you need a browser extension to read `?q=` and fill (and submit) the prompt on the Gemini page.
