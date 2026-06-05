@@ -5,7 +5,9 @@
 	import { Input, InputIcon, InputSubmit } from '$lib/components/input/index.js';
 	import QuickLink from '$lib/components/QuickLink.svelte';
 	import TransactionList from '$lib/components/TransactionList.svelte';
+	import TransactionListSkeleton from '$lib/components/TransactionListSkeleton.svelte';
 	import WeatherDisplay from '$lib/components/WeatherDisplay.svelte';
+	import WeatherDisplaySkeleton from '$lib/components/WeatherDisplaySkeleton.svelte';
 	import { quickLinks } from '$lib/quick-links';
 
 	let { data } = $props();
@@ -23,10 +25,7 @@
 <div class="relative flex h-full min-h-0 w-full flex-col">
 	<div class="absolute start-0 top-0 z-20">
 		{#await data.weather}
-			<div
-				class="h-10 w-28 animate-pulse rounded-full border border-border bg-background/80 shadow-lg sm:h-11 sm:w-32"
-				aria-hidden="true"
-			></div>
+			<WeatherDisplaySkeleton />
 		{:then weather}
 			<WeatherDisplay weather={weather.weather} error={weather.weatherError} />
 		{/await}
@@ -61,10 +60,7 @@
 			</nav>
 
 			{#await data.finances}
-				<div
-					class="h-72 w-full shrink-0 animate-pulse rounded-xl border border-border bg-background/80 shadow-lg"
-					aria-hidden="true"
-				></div>
+				<TransactionListSkeleton class="w-full shrink-0" />
 			{:then finances}
 				<TransactionList
 					class="w-full shrink-0"
