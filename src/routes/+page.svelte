@@ -23,17 +23,17 @@
 </script>
 
 <div class="relative w-full">
-	<div class="absolute start-0 top-0 z-20">
-		{#await data.weather}
-			<WeatherDisplaySkeleton />
-		{:then weather}
-			<WeatherDisplay weather={weather.weather} error={weather.weatherError} />
-		{/await}
-	</div>
-
 	<div
 		class="mx-auto flex w-full max-w-3xl min-h-[calc(100dvh-4rem)] flex-col justify-center gap-6 py-8"
 	>
+		<div class="weather-slot flex w-full justify-center lg:absolute lg:start-0 lg:top-0 lg:z-20 lg:w-auto lg:justify-start">
+			{#await data.weather}
+				<WeatherDisplaySkeleton />
+			{:then weather}
+				<WeatherDisplay weather={weather.weather} error={weather.weatherError} />
+			{/await}
+		</div>
+
 		<h1 class="text-center text-3xl font-medium text-primary sm:text-4xl">
 			{welcomeHeading}
 		</h1>
@@ -49,7 +49,7 @@
 			</Input>
 		</form>
 
-		<nav class="flex w-full items-center justify-between gap-1" aria-label="Quick links">
+		<nav class="quick-links flex w-full items-center justify-between" aria-label="Quick links">
 			{#each quickLinks as link (link.href)}
 				<QuickLink
 					href={link.href}
@@ -74,3 +74,9 @@
 		{/await}
 	</div>
 </div>
+
+<style>
+	.quick-links {
+		gap: clamp(0.125rem, 0.05rem + 0.5vw, 0.25rem);
+	}
+</style>

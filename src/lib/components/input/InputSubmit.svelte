@@ -23,7 +23,7 @@
 	<button
 		{type}
 		aria-label={ariaLabel}
-		class="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-tertiary text-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50 {className}"
+		class="input-submit inline-flex shrink-0 items-center justify-center rounded-full bg-tertiary text-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50 {className}"
 		in:fly={{ y: 8, duration: 200 }}
 		out:fly={{ y: 8, duration: 150 }}
 		{...buttonProps}
@@ -35,17 +35,22 @@
 {/if}
 
 <style>
+	.input-submit {
+		width: clamp(2rem, 1.5rem + 1.5vw, 2.5rem);
+		height: clamp(2rem, 1.5rem + 1.5vw, 2.5rem);
+	}
+
 	.input-submit__icon {
 		display: inline-flex;
-		width: 24px;
-		height: 24px;
+		width: clamp(1.125rem, 0.875rem + 0.75vw, 1.5rem);
+		height: clamp(1.125rem, 0.875rem + 0.75vw, 1.5rem);
 		align-items: center;
 		justify-content: center;
 	}
 
 	.input-submit__icon :global(svg) {
-		width: 24px;
-		height: 24px;
+		width: 100%;
+		height: 100%;
 		scale: 1.35;
 	}
 </style>

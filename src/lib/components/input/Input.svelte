@@ -151,7 +151,7 @@
 		bind:value
 		{placeholder}
 		{rows}
-		class="input-field min-w-0 resize-none bg-transparent text-xl text-primary placeholder:text-muted-foreground focus:outline-none {inputClass}"
+		class="input-field min-w-0 resize-none bg-transparent text-primary placeholder:text-muted-foreground focus:outline-none {inputClass}"
 		class:input-field--stacked={iconsStacked}
 		oninput={handleInput}
 		onkeydown={handleKeydown}
@@ -170,13 +170,13 @@
 <style>
 	.input-shell {
 		display: grid;
-		min-height: 4rem;
+		min-height: clamp(2.75rem, 2rem + 2.5vw, 4rem);
 		align-items: center;
-		column-gap: 1rem;
-		row-gap: 0.75rem;
-		padding-inline: 1rem;
+		column-gap: clamp(0.5rem, 0.25rem + 1vw, 1rem);
+		row-gap: clamp(0.5rem, 0.35rem + 0.5vw, 0.75rem);
+		padding-inline: clamp(0.625rem, 0.25rem + 1.5vw, 1rem);
 		/* Half of min-height — interpolates cleanly to stacked radius (not 9999px) */
-		border-radius: 2rem;
+		border-radius: clamp(1.25rem, 0.5rem + 3vw, 2rem);
 		transition:
 			border-color 0.2s ease,
 			border-radius 0.28s cubic-bezier(0.22, 1, 0.36, 1);
@@ -192,9 +192,10 @@
 
 	.input-shell--stacked {
 		align-items: start;
-		border-radius: 1rem;
-		padding: 1.5rem 1.5rem 1.125rem;
-		row-gap: 1.25rem;
+		border-radius: clamp(0.875rem, 0.5rem + 1.5vw, 1rem);
+		padding: clamp(1rem, 0.75rem + 1.5vw, 1.5rem) clamp(1rem, 0.75rem + 1.5vw, 1.5rem)
+			clamp(0.75rem, 0.5rem + 1vw, 1.125rem);
+		row-gap: clamp(0.875rem, 0.5rem + 1.5vw, 1.25rem);
 	}
 
 	.input-shell--stacked .input-adornment--leading,
@@ -256,6 +257,8 @@
 		width: 100%;
 		overflow: hidden;
 		white-space: nowrap;
+		font-size: clamp(1rem, 0.875rem + 0.5vw, 1.25rem);
+		line-height: 1.4;
 	}
 
 	.input-field--stacked {
@@ -282,7 +285,7 @@
 		width: auto;
 		white-space: pre;
 		pointer-events: none;
-		font-size: 1.25rem;
-		line-height: 1.75rem;
+		font-size: clamp(1rem, 0.875rem + 0.5vw, 1.25rem);
+		line-height: 1.4;
 	}
 </style>

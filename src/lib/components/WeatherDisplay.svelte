@@ -47,7 +47,7 @@
 		<WeatherIcon aria-hidden="true" class="size-6 shrink-0 text-primary" />
 		<div class="flex min-w-0 flex-col gap-0.5 leading-tight">
 			<span class="text-sm font-medium tabular-nums">{weather.temperature}</span>
-			<div class="hidden items-center gap-2 whitespace-nowrap text-xs sm:flex">
+			<div class="flex items-center gap-2 whitespace-nowrap text-xs">
 				<span class="inline-flex items-center gap-0.5 text-[#fb923c]">
 					<ArrowUpIcon aria-hidden="true" class="size-3.5 shrink-0" />
 					<span class="tabular-nums">{weather.high}</span>

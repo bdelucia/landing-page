@@ -4,6 +4,7 @@
 	type Props = {
 		src?: string;
 		alt?: string;
+		/** Fixed pixel size; omit for fluid scaling with viewport */
 		size?: number;
 		class?: string;
 		children?: Snippet;
@@ -12,16 +13,16 @@
 	let {
 		src,
 		alt = '',
-		size = 28,
+		size,
 		class: className = '',
 		children
 	}: Props = $props();
 </script>
 
 <span
-	class="input-icon inline-flex shrink-0 items-center justify-center {className}"
-	style:width="{size}px"
-	style:height="{size}px"
+	class="input-icon inline-flex shrink-0 items-center justify-center {size ? '' : 'input-icon--fluid'} {className}"
+	style:width={size ? `${size}px` : undefined}
+	style:height={size ? `${size}px` : undefined}
 >
 	{#if children}
 		{@render children()}
@@ -38,6 +39,11 @@
 </span>
 
 <style>
+	.input-icon--fluid {
+		width: clamp(1.375rem, 1rem + 1.25vw, 1.75rem);
+		height: clamp(1.375rem, 1rem + 1.25vw, 1.75rem);
+	}
+
 	.input-icon :global(svg) {
 		width: 100%;
 		height: 100%;
