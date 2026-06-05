@@ -14,8 +14,8 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"deploy:docker": "docker compose build --no-cache && docker compose up -d",
-		"sqlite:web:start": "docker rm -f sqlite-web >/dev/null 2>&1 || true && docker run --rm -d --name sqlite-web -p 8081:8080 -v \"$PWD/data:/data\" python:3.12-slim sh -lc \"pip install --no-cache-dir sqlite-web && sqlite_web /data/finance.sqlite --host 0.0.0.0 --port 8080\"",
-		"sqlite:web:stop": "docker stop sqlite-web >/dev/null 2>&1 || true",
+		"sqlite:web:start": "docker rm -f sqlite-web >/dev/null 2>&1 || true && docker run --rm -d --name sqlite-web --label landing-page.sqlite-web=true -p 8081:8080 -v \"$PWD/data:/data\" python:3.12-slim sh -lc \"pip install --no-cache-dir sqlite-web && sqlite_web /data/finance.sqlite --host 0.0.0.0 --port 8080\"",
+		"sqlite:web:stop": "docker stop $(docker ps -q --filter publish=8081) >/dev/null 2>&1 || true && docker rm -f sqlite-web >/dev/null 2>&1 || true",
 		"sqlite:web:logs": "docker logs -f sqlite-web"
 	},
 	"devDependencies": {
