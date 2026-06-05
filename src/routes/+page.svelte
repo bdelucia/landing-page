@@ -22,7 +22,14 @@
 
 <div class="relative flex h-full min-h-0 w-full flex-col">
 	<div class="absolute start-0 top-0 z-20">
-		<WeatherDisplay weather={data.weather} error={data.weatherError} />
+		{#await data.weather}
+			<div
+				class="h-10 w-28 animate-pulse rounded-full border border-border bg-background/80 shadow-lg sm:h-11 sm:w-32"
+				aria-hidden="true"
+			></div>
+		{:then weather}
+			<WeatherDisplay weather={weather.weather} error={weather.weatherError} />
+		{/await}
 	</div>
 
 	<div class="mx-auto flex min-h-0 w-full max-w-3xl flex-1 overflow-y-auto overscroll-contain">
@@ -53,13 +60,20 @@
 				{/each}
 			</nav>
 
-			<TransactionList
-				class="w-full shrink-0"
-				accounts={data.accounts}
-				balancesError={data.accountBalancesError}
-				transactions={data.transactions}
-				error={data.transactionsError}
-			/>
+			{#await data.finances}
+				<div
+					class="h-72 w-full shrink-0 animate-pulse rounded-xl border border-border bg-background/80 shadow-lg"
+					aria-hidden="true"
+				></div>
+			{:then finances}
+				<TransactionList
+					class="w-full shrink-0"
+					accounts={finances.accounts}
+					balancesError={finances.accountBalancesError}
+					transactions={finances.transactions}
+					error={finances.transactionsError}
+				/>
+			{/await}
 		</div>
 	</div>
 </div>

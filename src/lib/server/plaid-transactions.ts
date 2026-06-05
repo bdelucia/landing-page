@@ -1,4 +1,5 @@
 import type { Transaction } from 'plaid';
+import { withCache } from '$lib/server/cache';
 import { personalSecrets } from '$lib/server/personal-secrets';
 import { getPlaidLinkedItems, isPlaidLinked } from '$lib/server/integration-config';
 import { createPlaidClient, formatPlaidApiError } from '$lib/server/plaid';
@@ -146,6 +147,8 @@ export type FetchTransactionsResult = {
 	error: string | null;
 };
 
+const TRANSACTIONS_CACHE_TTL_MS = 2 * 60 * 1000;
+
 export async function fetchRecentTransactions(count = 12): Promise<FetchTransactionsResult> {
 	if (!isPlaidLinked(personalSecrets)) {
 		return {
@@ -155,6 +158,19 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = personalSecrets;
+	const cacheKey = `plaid-transactions:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
+		.map((item) => item.itemId ?? item.accessToken)
+		.join(',')}`;
+
+	return withCache(cacheKey, TRANSACTIONS_CACHE_TTL_MS, () =>
+		fetchRecentTransactionsUncached(plaid, count)
+	);
+}
+
+async function fetchRecentTransactionsUncached(
+	plaid: PlaidConfig,
+	count: number
+): Promise<FetchTransactionsResult> {
 	const linkedItems = getPlaidLinkedItems(plaid);
 
 	if (linkedItems.length === 0) {

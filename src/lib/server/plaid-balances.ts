@@ -1,4 +1,5 @@
 import type { AccountBase } from 'plaid';
+import { withCache } from '$lib/server/cache';
 import { personalSecrets } from '$lib/server/personal-secrets';
 import {
 	accountBalanceDisplayOrder,
@@ -85,6 +86,8 @@ export type FetchAccountBalancesResult = {
 	error: string | null;
 };
 
+const BALANCES_CACHE_TTL_MS = 2 * 60 * 1000;
+
 export async function fetchAccountBalances(): Promise<FetchAccountBalancesResult> {
 	if (!isPlaidLinked(personalSecrets)) {
 		return {
@@ -94,6 +97,14 @@ export async function fetchAccountBalances(): Promise<FetchAccountBalancesResult
 	}
 
 	const { plaid } = personalSecrets;
+	const cacheKey = `plaid-balances:${plaid.environment}:${getPlaidLinkedItems(plaid)
+		.map((item) => item.itemId ?? item.accessToken)
+		.join(',')}`;
+
+	return withCache(cacheKey, BALANCES_CACHE_TTL_MS, () => fetchAccountBalancesUncached(plaid));
+}
+
+async function fetchAccountBalancesUncached(plaid: PlaidConfig): Promise<FetchAccountBalancesResult> {
 	const linkedItems = getPlaidLinkedItems(plaid);
 	const accounts = sortByDisplayOrder(
 		await Promise.all(linkedItems.map((item) => fetchBalanceForItem(plaid, item)))

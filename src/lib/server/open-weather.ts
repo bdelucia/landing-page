@@ -1,4 +1,5 @@
 import type { OpenWeatherConfig } from '$data/personal-info.types';
+import { withCache } from '$lib/server/cache';
 import { personalSecrets } from '$lib/server/personal-secrets';
 import {
 	isOpenWeatherConfigured,
@@ -40,12 +41,22 @@ export type FetchWeatherResult = {
 	error: string | null;
 };
 
+const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000;
+
 export async function fetchCurrentWeather(): Promise<FetchWeatherResult> {
 	if (!isOpenWeatherConfigured(personalSecrets)) {
 		return { weather: null, error: null };
 	}
 
 	const { openWeather } = personalSecrets;
+	const cacheKey = `open-weather:${openWeatherLocationQuery(openWeather)}:${openWeather.units ?? 'metric'}`;
+
+	return withCache(cacheKey, WEATHER_CACHE_TTL_MS, () => fetchCurrentWeatherUncached(openWeather));
+}
+
+async function fetchCurrentWeatherUncached(
+	openWeather: OpenWeatherConfig
+): Promise<FetchWeatherResult> {
 	const units = openWeather.units ?? 'metric';
 	const params = new URLSearchParams({
 		zip: openWeatherLocationQuery(openWeather),
