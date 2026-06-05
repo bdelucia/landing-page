@@ -21,6 +21,12 @@
 	--color-surface: var(--color-surface);
 	--color-surface-raised: var(--color-surface-raised);
 	--color-income: var(--color-income);
+	--color-debt: var(--color-debt);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
 	--radius-sm: var(--radius-sm);
 	--radius-md: var(--radius-md);
 	--radius-lg: var(--radius-lg);
@@ -30,8 +36,7 @@
 @layer base {
 	html,
 	body {
-		height: 100dvh;
-		overflow: hidden;
+		min-height: 100dvh;
 	}
 
 	body {

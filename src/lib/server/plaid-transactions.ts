@@ -2,6 +2,7 @@ import type { Transaction } from 'plaid';
 import { withCache } from '$lib/server/cache';
 import { personalSecrets } from '$lib/server/personal-secrets';
 import { getPlaidLinkedItems, isPlaidLinked } from '$lib/server/integration-config';
+import { formatAccountTypeLabel } from '$lib/server/plaid-account-label';
 import { createPlaidClient, formatPlaidApiError } from '$lib/server/plaid';
 import type { PlaidConfig, PlaidLinkedItem } from '$data/personal-info.types';
 import type { TransactionIcon, TransactionItem } from '$lib/transactions';
@@ -78,7 +79,12 @@ function transactionSortKey(transaction: Transaction): string {
 	return transaction.datetime ?? `${transaction.date}T12:00:00`;
 }
 
-function mapTransaction(transaction: Transaction, sourceId: string): TransactionItem {
+function mapTransaction(
+	transaction: Transaction,
+	sourceId: string,
+	bankLabel: string,
+	accountLabels: Map<string, string>
+): TransactionItem {
 	const category = formatCategoryLabel(transaction);
 	const isIncome = transaction.amount < 0;
 	const amountLabel = isIncome
@@ -88,6 +94,8 @@ function mapTransaction(transaction: Transaction, sourceId: string): Transaction
 	return {
 		id: transaction.transaction_id,
 		sourceId,
+		bankLabel,
+		accountLabel: accountLabels.get(transaction.account_id) ?? 'Account',
 		merchant: transaction.merchant_name ?? transaction.name,
 		category,
 		dateLabel: formatTransactionDate(transaction.date, transaction.datetime),
@@ -104,8 +112,15 @@ function sortByRecency(transactions: Transaction[]): Transaction[] {
 	);
 }
 
-function mapTransactions(transactions: Transaction[], sourceId: string): TransactionItem[] {
-	return transactions.map((transaction) => mapTransaction(transaction, sourceId));
+function mapTransactions(
+	transactions: Transaction[],
+	sourceId: string,
+	bankLabel: string,
+	accountLabels: Map<string, string>
+): TransactionItem[] {
+	return transactions.map((transaction) =>
+		mapTransaction(transaction, sourceId, bankLabel, accountLabels)
+	);
 }
 
 function sortTransactionItems(transactions: TransactionItem[]): TransactionItem[] {
@@ -119,6 +134,7 @@ async function fetchTransactionsForItem(
 ): Promise<{ transactions: TransactionItem[]; error: string | null }> {
 	const client = createPlaidClient(plaid);
 	const sourceId = item.itemId ?? item.accessToken;
+	const bankLabel = item.label?.trim() ?? 'Account';
 
 	try {
 		const transactionsResponse = await client.transactionsGet({
@@ -128,10 +144,14 @@ async function fetchTransactionsForItem(
 			options: { count, offset: 0 }
 		});
 
-		const sorted = sortByRecency(transactionsResponse.data.transactions);
+		const { transactions, accounts } = transactionsResponse.data;
+		const accountLabels = new Map(
+			accounts.map((account) => [account.account_id, formatAccountTypeLabel(account)])
+		);
+		const sorted = sortByRecency(transactions);
 
 		return {
-			transactions: mapTransactions(sorted, sourceId),
+			transactions: mapTransactions(sorted, sourceId, bankLabel, accountLabels),
 			error: null
 		};
 	} catch (error) {
@@ -158,7 +178,7 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = personalSecrets;
-	const cacheKey = `plaid-transactions:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
+	const cacheKey = `plaid-transactions:v2:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
 		.map((item) => item.itemId ?? item.accessToken)
 		.join(',')}`;
 

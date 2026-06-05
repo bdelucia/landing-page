@@ -1,6 +1,15 @@
 <script lang="ts">
-	import type { AccountBalanceItem } from '$lib/account-balances';
+	import {
+		bankBrandColor,
+		categoryBalanceSummaries,
+		type AccountBalanceItem
+	} from '$lib/account-balances';
+	import {
+		buildAggregatedBankAccountDetail,
+		type BankAccountDetailsByItem
+	} from '$lib/bank-accounts';
 	import type { TransactionIcon, TransactionItem } from '$lib/transactions';
+	import AccountBalanceChart from '$lib/components/AccountBalanceChart.svelte';
 	import AccountBalances from '$lib/components/AccountBalances.svelte';
 	import CoffeeIcon from '@lucide/svelte/icons/coffee';
 	import ShoppingCartIcon from '@lucide/svelte/icons/shopping-cart';
@@ -12,12 +21,14 @@
 	let {
 		transactions = [],
 		accounts = [],
+		bankAccountDetails = {},
 		error = null,
 		balancesError = null,
 		class: className = ''
 	}: {
 		transactions?: TransactionItem[];
 		accounts?: AccountBalanceItem[];
+		bankAccountDetails?: BankAccountDetailsByItem;
 		error?: string | null;
 		balancesError?: string | null;
 		class?: string;
@@ -35,10 +46,53 @@
 	const displayLimit = 5;
 
 	let selectedAccountId = $state<string | null>(null);
+	let netWorthSelected = $state(false);
+
+	function toggleNetWorth() {
+		if (netWorthSelected) {
+			netWorthSelected = false;
+			return;
+		}
+
+		netWorthSelected = true;
+		selectedAccountId = null;
+	}
 
 	function toggleAccountFilter(accountId: string) {
-		selectedAccountId = selectedAccountId === accountId ? null : accountId;
+		if (selectedAccountId === accountId) {
+			selectedAccountId = null;
+			return;
+		}
+
+		selectedAccountId = accountId;
+		netWorthSelected = false;
 	}
+
+	const selectedBankDetail = $derived(
+		selectedAccountId ? bankAccountDetails[selectedAccountId] : null
+	);
+
+	const aggregatedBankDetail = $derived(buildAggregatedBankAccountDetail(bankAccountDetails));
+
+	const showChart = $derived(netWorthSelected || selectedAccountId !== null);
+
+	const chartDetail = $derived(
+		selectedBankDetail ?? (netWorthSelected ? aggregatedBankDetail : null)
+	);
+
+	const selectedBank = $derived(
+		selectedAccountId ? accounts.find((account) => account.id === selectedAccountId) : null
+	);
+
+	const sectionHeading = $derived(
+		selectedBank?.label ?? (netWorthSelected ? 'All Accounts' : 'Recent Transactions')
+	);
+
+	const categorySummaries = $derived(categoryBalanceSummaries(accounts));
+
+	const itemLabelsByItemId = $derived(
+		Object.fromEntries(accounts.map((account) => [account.id, account.label]))
+	);
 
 	const visibleTransactions = $derived.by(() => {
 		const pool = selectedAccountId
@@ -52,27 +106,34 @@
 </script>
 
 <section
-	class="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-background shadow-lg {className}"
+	class="flex w-full flex-col rounded-xl border border-border bg-background shadow-lg {className}"
 	aria-labelledby="recent-transactions-heading"
 >
-	<header
-		class="flex shrink-0 flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-border px-5 py-4"
-	>
-		<div class="min-w-0">
-			<h2 id="recent-transactions-heading" class="text-lg font-semibold text-primary">
-				Recent Transactions
-			</h2>
-			<p class="mt-0.5 text-sm text-muted-foreground">Your latest account activity.</p>
-		</div>
+	<header class="flex shrink-0 flex-col gap-4 border-b border-border px-4 py-4 sm:px-5">
 		<AccountBalances
 			accounts={accounts}
 			error={balancesError}
 			{selectedAccountId}
+			{netWorthSelected}
 			onAccountSelect={toggleAccountFilter}
-			compact
-			class="shrink-0"
+			onNetWorthSelect={toggleNetWorth}
+			class="w-full"
 		/>
+		<h2 id="recent-transactions-heading" class="min-w-0 text-lg font-semibold text-primary">
+			{sectionHeading}
+		</h2>
 	</header>
+
+	{#if showChart && chartDetail}
+		<div class="border-b border-border">
+			<AccountBalanceChart
+				detail={chartDetail}
+				totalOnly={netWorthSelected}
+				categorySummaries={netWorthSelected ? categorySummaries : []}
+				itemLabelsByItemId={netWorthSelected ? itemLabelsByItemId : {}}
+			/>
+		</div>
+	{/if}
 
 	{#if error}
 		<p class="px-5 py-6 text-sm text-muted-foreground" role="status">{error}</p>
@@ -94,7 +155,18 @@
 
 					<div class="col-start-2 row-start-1 min-w-0">
 						<p class="truncate font-medium text-primary">{transaction.merchant}</p>
-						<p class="truncate text-sm text-muted-foreground">{transaction.category}</p>
+						<p class="flex min-w-0 items-baseline gap-x-1 truncate text-sm">
+							<span class="shrink-0 text-muted-foreground">{transaction.category}</span>
+							<span class="shrink-0 text-muted-foreground" aria-hidden="true">·</span>
+							<span
+								class="shrink-0 font-medium"
+								style:color={bankBrandColor(transaction.bankLabel)}
+							>
+								{transaction.bankLabel}
+							</span>
+							<span class="shrink-0 text-muted-foreground" aria-hidden="true">·</span>
+							<span class="truncate text-muted-foreground">{transaction.accountLabel}</span>
+						</p>
 						<p class="mt-0.5 text-xs text-muted-foreground sm:hidden">{transaction.dateLabel}</p>
 					</div>
 

@@ -3,6 +3,9 @@ import { withCache } from '$lib/server/cache';
 import { personalSecrets } from '$lib/server/personal-secrets';
 import {
 	accountBalanceDisplayOrder,
+	debtBalanceFromRaw,
+	formatDebtBalanceLabel,
+	isDebtAccountLabel,
 	type AccountBalanceItem
 } from '$lib/account-balances';
 import { accountBalanceIcon } from '$lib/account-balance-icons';
@@ -41,6 +44,7 @@ async function fetchBalanceForItem(
 			label,
 			icon: '',
 			balanceLabel: '—',
+			balance: null,
 			error: `No icon configured for "${label}"`
 		};
 	}
@@ -49,13 +53,16 @@ async function fetchBalanceForItem(
 
 	try {
 		const response = await client.accountsBalanceGet({ access_token: item.accessToken });
-		const total = sumAccountBalances(response.data.accounts);
+		const rawTotal = sumAccountBalances(response.data.accounts);
+		const isDebt = isDebtAccountLabel(label);
 
 		return {
 			id,
 			label,
 			icon,
-			balanceLabel: money.format(total)
+			balanceLabel: isDebt ? formatDebtBalanceLabel(rawTotal) : money.format(rawTotal),
+			balance: isDebt ? debtBalanceFromRaw(rawTotal) : rawTotal,
+			isDebt
 		};
 	} catch (error) {
 		return {
@@ -63,6 +70,7 @@ async function fetchBalanceForItem(
 			label,
 			icon,
 			balanceLabel: '—',
+			balance: null,
 			error: formatPlaidApiError(error)
 		};
 	}
@@ -98,7 +106,7 @@ export async function fetchAccountBalances(): Promise<FetchAccountBalancesResult
 	}
 
 	const { plaid } = personalSecrets;
-	const cacheKey = `plaid-balances:${plaid.environment}:${getPlaidLinkedItems(plaid)
+	const cacheKey = `plaid-balances:v3:${plaid.environment}:${getPlaidLinkedItems(plaid)
 		.map((item) => item.itemId ?? item.accessToken)
 		.join(',')}`;
 

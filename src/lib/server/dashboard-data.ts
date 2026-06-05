@@ -1,4 +1,6 @@
+import type { BankAccountDetailsByItem } from '$lib/bank-accounts';
 import { fetchAccountBalances } from '$lib/server/plaid-balances';
+import { fetchBankAccountDetails } from '$lib/server/plaid-bank-accounts';
 import { fetchCurrentWeather } from '$lib/server/open-weather';
 import { fetchRecentTransactions } from '$lib/server/plaid-transactions';
 import type { AccountBalanceItem } from '$lib/account-balances';
@@ -15,6 +17,8 @@ export type DashboardFinances = {
 	transactionsError: string | null;
 	accounts: AccountBalanceItem[];
 	accountBalancesError: string | null;
+	bankAccountDetails: BankAccountDetailsByItem;
+	bankAccountDetailsError: string | null;
 };
 
 export function loadDashboardWeather(): Promise<DashboardWeather> {
@@ -27,12 +31,14 @@ export function loadDashboardWeather(): Promise<DashboardWeather> {
 }
 
 export function loadDashboardFinances(): Promise<DashboardFinances> {
-	return Promise.all([fetchRecentTransactions(5), fetchAccountBalances()])
-		.then(([transactionsResult, accountsResult]) => ({
+	return Promise.all([fetchRecentTransactions(5), fetchAccountBalances(), fetchBankAccountDetails()])
+		.then(([transactionsResult, accountsResult, bankAccountsResult]) => ({
 			transactions: transactionsResult.transactions,
 			transactionsError: transactionsResult.error,
 			accounts: accountsResult.accounts,
-			accountBalancesError: accountsResult.error
+			accountBalancesError: accountsResult.error,
+			bankAccountDetails: bankAccountsResult.byItemId,
+			bankAccountDetailsError: bankAccountsResult.error
 		}))
 		.catch((error: unknown) => {
 			const message = error instanceof Error ? error.message : 'Failed to load account data';
@@ -40,7 +46,9 @@ export function loadDashboardFinances(): Promise<DashboardFinances> {
 				transactions: [],
 				transactionsError: message,
 				accounts: [],
-				accountBalancesError: message
+				accountBalancesError: message,
+				bankAccountDetails: {},
+				bankAccountDetailsError: message
 			};
 		});
 }

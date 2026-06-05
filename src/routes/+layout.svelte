@@ -23,8 +23,7 @@
 <style>
 	.app-shell {
 		position: relative;
-		height: 100dvh;
-		overflow: hidden;
+		min-height: 100dvh;
 		isolation: isolate;
 	}
 
@@ -49,7 +48,7 @@
 		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
-		height: 100%;
+		min-height: 100dvh;
 		padding: 2rem;
 	}
 </style>
