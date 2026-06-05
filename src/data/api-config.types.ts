@@ -1,12 +1,16 @@
 /**
  * Integration credentials and options (server-only via `personalSecrets`).
- * @see https://openweathermap.org/current — OpenWeather
+ * @see https://openweathermap.org/api/one-call-3 — OpenWeather One Call 3.0
  * @see https://plaid.com/docs/api/#api-host — Plaid
  */
 
-/** OpenWeatherMap Current Weather — https://openweathermap.org/current */
+/**
+ * OpenWeather — One Call API 3.0 for current conditions and daily high/low.
+ * Requires the separate "One Call by Call" subscription on your OpenWeather account.
+ * @see https://openweathermap.org/api/one-call-3
+ */
 export type OpenWeatherConfig = {
-	/** API key from https://home.openweathermap.org/api_keys */
+	/** API key from https://home.openweathermap.org/api_keys (One Call 3.0 subscription) */
 	apiKey: string;
 	/**
 	 * Postal code without country suffix, e.g. `"10001"`, `"90210"`.

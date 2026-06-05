@@ -10,13 +10,23 @@ import {
 	type WeatherDisplay
 } from '$lib/weather';
 
-type OpenWeatherCurrentResponse = {
+type OpenWeatherGeocodeResponse = {
 	name: string;
-	main: { temp: number; temp_min: number; temp_max: number };
-	weather: Array<{
-		id: number;
-		description: string;
-		icon: string;
+	lat: number;
+	lon: number;
+};
+
+type OpenWeatherOneCallResponse = {
+	current: {
+		temp: number;
+		weather: Array<{
+			id: number;
+			description: string;
+			icon: string;
+		}>;
+	};
+	daily: Array<{
+		temp: { min: number; max: number };
 	}>;
 };
 
@@ -42,6 +52,7 @@ export type FetchWeatherResult = {
 };
 
 const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000;
+const GEOCODE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export async function fetchCurrentWeather(): Promise<FetchWeatherResult> {
 	if (!isOpenWeatherConfigured(personalSecrets)) {
@@ -49,47 +60,99 @@ export async function fetchCurrentWeather(): Promise<FetchWeatherResult> {
 	}
 
 	const { openWeather } = personalSecrets;
-	const cacheKey = `open-weather:${openWeatherLocationQuery(openWeather)}:${openWeather.units ?? 'metric'}`;
+	const locationQuery = openWeatherLocationQuery(openWeather);
+	const units = openWeather.units ?? 'metric';
+	const cacheKey = `open-weather:${locationQuery}:${units}`;
 
-	return withCache(cacheKey, WEATHER_CACHE_TTL_MS, () => fetchCurrentWeatherUncached(openWeather));
+	return withCache(cacheKey, WEATHER_CACHE_TTL_MS, () =>
+		fetchCurrentWeatherUncached(openWeather, locationQuery, units)
+	);
+}
+
+async function geocodeZip(
+	openWeather: OpenWeatherConfig,
+	locationQuery: string
+): Promise<{ location: OpenWeatherGeocodeResponse } | { error: string }> {
+	const cacheKey = `open-weather-geocode:${locationQuery}`;
+
+	return withCache(cacheKey, GEOCODE_CACHE_TTL_MS, async () => {
+		const params = new URLSearchParams({
+			zip: locationQuery,
+			appid: openWeather.apiKey
+		});
+
+		try {
+			const response = await fetch(
+				`https://api.openweathermap.org/geo/1.0/zip?${params.toString()}`
+			);
+
+			if (!response.ok) {
+				const body = await response.text();
+				return {
+					error: `OpenWeather geocoding returned ${response.status}${body ? `: ${body.slice(0, 120)}` : ''}`
+				};
+			}
+
+			const data = (await response.json()) as OpenWeatherGeocodeResponse;
+			return { location: data };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			return { error: `Failed to geocode location: ${message}` };
+		}
+	});
 }
 
 async function fetchCurrentWeatherUncached(
-	openWeather: OpenWeatherConfig
+	openWeather: OpenWeatherConfig,
+	locationQuery: string,
+	units: NonNullable<OpenWeatherConfig['units']> | 'metric'
 ): Promise<FetchWeatherResult> {
-	const units = openWeather.units ?? 'metric';
+	const geocode = await geocodeZip(openWeather, locationQuery);
+	if ('error' in geocode) {
+		return { weather: null, error: geocode.error };
+	}
+
+	const { lat, lon, name } = geocode.location;
 	const params = new URLSearchParams({
-		zip: openWeatherLocationQuery(openWeather),
-		appid: openWeather.apiKey,
-		units
+		lat: String(lat),
+		lon: String(lon),
+		exclude: 'minutely,hourly,alerts',
+		units,
+		appid: openWeather.apiKey
 	});
 
 	try {
 		const response = await fetch(
-			`https://api.openweathermap.org/data/2.5/weather?${params.toString()}`
+			`https://api.openweathermap.org/data/3.0/onecall?${params.toString()}`
 		);
 
 		if (!response.ok) {
 			const body = await response.text();
 			return {
 				weather: null,
-				error: `OpenWeather returned ${response.status}${body ? `: ${body.slice(0, 120)}` : ''}`
+				error: `OpenWeather One Call returned ${response.status}${body ? `: ${body.slice(0, 120)}` : ''}`
 			};
 		}
 
-		const data = (await response.json()) as OpenWeatherCurrentResponse;
-		const condition = data.weather[0];
+		const data = (await response.json()) as OpenWeatherOneCallResponse;
+		const condition = data.current.weather[0];
+		const today = data.daily[0];
+
 		if (!condition) {
 			return { weather: null, error: 'OpenWeather response had no weather conditions' };
 		}
 
+		if (!today) {
+			return { weather: null, error: 'OpenWeather response had no daily forecast' };
+		}
+
 		return {
 			weather: {
-				temperature: formatTemperature(data.main.temp, units),
-				high: formatTemperature(data.main.temp_max, units),
-				low: formatTemperature(data.main.temp_min, units),
+				temperature: formatTemperature(data.current.temp, units),
+				high: formatTemperature(today.temp.max, units),
+				low: formatTemperature(today.temp.min, units),
 				description: capitalizeDescription(condition.description),
-				location: data.name,
+				location: name,
 				icon: weatherIconFromCondition(condition.id, condition.icon)
 			},
 			error: null
