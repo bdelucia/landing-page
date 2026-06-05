@@ -29,8 +29,9 @@ export const personalSecrets: PersonalSecrets = {
 	// 	itemId: '', // optional; same Item as accessToken
 	// 	// Multiple banks: one entry per Link session (each with its own accessToken)
 	// 	// items: [
-	// 	// 	{ accessToken: '', label: 'Chase' },
-	// 	// 	{ accessToken: '', label: 'Amex' }
+	// 	// 	{ accessToken: '', itemId: '', label: 'AZFCU' },
+	// 	// 	{ accessToken: '', itemId: '', label: 'Robinhood' },
+	// 	// 	{ accessToken: '', itemId: '', label: 'Fidelity' }
 	// 	// ]
 	// }
 };

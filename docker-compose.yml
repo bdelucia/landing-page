@@ -17,5 +17,9 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: "3000"
+      SQLITE_DB_PATH: ${SQLITE_DB_PATH:-/app/data/finance.sqlite}
+      BALANCE_LOG_CRON_TOKEN: ${BALANCE_LOG_CRON_TOKEN:-}
       # Optional: set in project `.env` when using Tailscale Serve (see .env.docker.example)
       ORIGIN: ${ORIGIN:-}
+    volumes:
+      - ./data:/app/data
