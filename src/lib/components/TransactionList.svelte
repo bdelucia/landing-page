@@ -1,16 +1,17 @@
 <script lang="ts">
 	import {
 		bankBrandColor,
-		categoryBalanceSummaries,
-		type AccountBalanceItem
+		categoryBalanceSummaries
 	} from '$lib/account-balances';
 	import {
 		buildAggregatedBankAccountDetail,
 		type BankAccountDetailsByItem
 	} from '$lib/bank-accounts';
+	import type { DashboardFinances } from '$lib/dashboard-data';
 	import type { TransactionIcon, TransactionItem } from '$lib/transactions';
 	import AccountBalanceChart from '$lib/components/AccountBalanceChart.svelte';
 	import AccountBalances from '$lib/components/AccountBalances.svelte';
+	import TransactionRowsSkeleton from '$lib/components/TransactionRowsSkeleton.svelte';
 	import CoffeeIcon from '@lucide/svelte/icons/coffee';
 	import ShoppingCartIcon from '@lucide/svelte/icons/shopping-cart';
 	import WalletIcon from '@lucide/svelte/icons/wallet';
@@ -19,18 +20,10 @@
 	import CircleDollarSignIcon from '@lucide/svelte/icons/circle-dollar-sign';
 
 	let {
-		transactions = [],
-		accounts = [],
-		bankAccountDetails = {},
-		error = null,
-		balancesError = null,
+		finances,
 		class: className = ''
 	}: {
-		transactions?: TransactionItem[];
-		accounts?: AccountBalanceItem[];
-		bankAccountDetails?: BankAccountDetailsByItem;
-		error?: string | null;
-		balancesError?: string | null;
+		finances: Promise<DashboardFinances>;
 		class?: string;
 	} = $props();
 
@@ -45,8 +38,33 @@
 
 	const displayLimit = 5;
 
+	let financesLoading = $state(true);
+	let dashboardFinances = $state<DashboardFinances | null>(null);
+
 	let selectedAccountId = $state<string | null>(null);
 	let netWorthSelected = $state(false);
+
+	$effect(() => {
+		let cancelled = false;
+		financesLoading = true;
+
+		finances.then((result) => {
+			if (!cancelled) {
+				dashboardFinances = result;
+				financesLoading = false;
+			}
+		});
+
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	const transactions = $derived(dashboardFinances?.transactions ?? []);
+	const accounts = $derived(dashboardFinances?.accounts ?? []);
+	const bankAccountDetails = $derived(dashboardFinances?.bankAccountDetails ?? {});
+	const error = $derived(dashboardFinances?.transactionsError ?? null);
+	const balancesError = $derived(dashboardFinances?.accountBalancesError ?? null);
 
 	function toggleNetWorth() {
 		if (netWorthSelected) {
@@ -74,7 +92,7 @@
 
 	const aggregatedBankDetail = $derived(buildAggregatedBankAccountDetail(bankAccountDetails));
 
-	const showChart = $derived(netWorthSelected || selectedAccountId !== null);
+	const showChart = $derived(!financesLoading && (netWorthSelected || selectedAccountId !== null));
 
 	const chartDetail = $derived(
 		selectedBankDetail ?? (netWorthSelected ? aggregatedBankDetail : null)
@@ -106,13 +124,15 @@
 </script>
 
 <section
-	class="flex w-full flex-col rounded-xl border border-border bg-background shadow-lg {className}"
+	class="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-background shadow-lg {className}"
 	aria-labelledby="recent-transactions-heading"
+	aria-busy={financesLoading}
 >
 	<header class="flex shrink-0 flex-col gap-4 border-b border-border px-4 py-4 sm:px-5">
 		<AccountBalances
-			accounts={accounts}
+			{accounts}
 			error={balancesError}
+			loading={financesLoading}
 			{selectedAccountId}
 			{netWorthSelected}
 			onAccountSelect={toggleAccountFilter}
@@ -135,7 +155,10 @@
 		</div>
 	{/if}
 
-	{#if error}
+	{#if financesLoading}
+		<TransactionRowsSkeleton />
+		<p class="sr-only" role="status">Loading recent transactions and account balances</p>
+	{:else if error}
 		<p class="px-5 py-6 text-sm text-muted-foreground" role="status">{error}</p>
 	{:else if visibleTransactions.length === 0}
 		<p class="px-5 py-6 text-sm text-muted-foreground" role="status">No transactions to show.</p>

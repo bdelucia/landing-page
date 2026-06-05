@@ -30,16 +30,29 @@ function accountBalanceAmount(account: AccountBalanceItem): number | null {
 	return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function netWorthBalanceLabel(accounts: AccountBalanceItem[]): string {
+export function netWorthAmount(accounts: AccountBalanceItem[]): number | null {
 	const amounts = accounts
 		.map(accountBalanceAmount)
 		.filter((amount): amount is number => amount != null);
 
 	if (amounts.length === 0) {
-		return '—';
+		return null;
 	}
 
-	return formatUsdBalance(amounts.reduce((sum, amount) => sum + amount, 0));
+	return amounts.reduce((sum, amount) => sum + amount, 0);
+}
+
+export function netWorthBalanceLabel(accounts: AccountBalanceItem[]): string {
+	const total = netWorthAmount(accounts);
+	return total == null ? '—' : formatUsdBalance(total);
+}
+
+export function balanceDisplayAmount(account: AccountBalanceItem): number | null {
+	if (account.balance == null) {
+		return null;
+	}
+
+	return account.isDebt ? Math.abs(account.balance) : account.balance;
 }
 
 export const accountBalanceDisplayOrder = [

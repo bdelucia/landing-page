@@ -17,7 +17,10 @@ import {
 	ensureDummyBalanceSnapshots,
 	type DummySnapshotAccount
 } from '$lib/server/dummy-balance-snapshots';
-import { formatAccountTypeLabel } from '$lib/server/plaid-account-label';
+import {
+	formatChartAccountTypeLabel,
+	hasChartLabelOverride
+} from '$lib/server/plaid-account-label';
 import { createPlaidClient, formatPlaidApiError } from '$lib/server/plaid';
 import type { PlaidConfig, PlaidLinkedItem } from '$data/personal-info.types';
 
@@ -30,18 +33,24 @@ function accountBalanceAmount(account: AccountBase): number {
 	return 0;
 }
 
-function mapAccount(account: AccountBase, itemId: string, isDebt: boolean): BankAccountItem {
+function mapAccount(
+	account: AccountBase,
+	itemId: string,
+	bankLabel: string,
+	isDebt: boolean
+): BankAccountItem {
 	const rawBalance = accountBalanceAmount(account);
 	const balance = isDebt ? debtBalanceFromRaw(rawBalance) : rawBalance;
 
 	return {
 		id: account.account_id,
 		itemId,
-		typeLabel: formatAccountTypeLabel(account),
+		typeLabel: formatChartAccountTypeLabel(account, bankLabel),
 		mask: account.mask?.trim() ?? null,
 		balanceLabel: isDebt ? formatDebtBalanceLabel(rawBalance) : money.format(rawBalance),
 		balance,
-		isDebt
+		isDebt,
+		forceChartHeader: hasChartLabelOverride(account, bankLabel)
 	};
 }
 
@@ -82,7 +91,7 @@ async function fetchAccountsForItem(
 		const response = await client.accountsBalanceGet({ access_token: item.accessToken });
 		const paired = response.data.accounts.map((account) => ({
 			raw: account,
-			mapped: mapAccount(account, itemKey, isDebt)
+			mapped: mapAccount(account, itemKey, itemLabel, isDebt)
 		}));
 		const accounts = paired
 			.map(({ mapped }) => mapped)

@@ -15,6 +15,8 @@ export type BankAccountItem = {
 	balance: number;
 	/** Liability accounts store negative balances for net-worth math. */
 	isDebt?: boolean;
+	/** Show in chart header even when account_mask is null in SQLite. */
+	forceChartHeader?: boolean;
 };
 
 export type AccountBalanceChartPoint = {
@@ -24,6 +26,8 @@ export type AccountBalanceChartPoint = {
 
 export type BankAccountDetail = {
 	accounts: BankAccountItem[];
+	/** Subset of accounts shown in the chart header (excludes DB rows with null account_mask). */
+	headerAccounts: BankAccountItem[];
 	chartData: AccountBalanceChartPoint[];
 	chartConfig: ChartConfig;
 	isDummyData: boolean;
@@ -122,8 +126,11 @@ export function buildAggregatedBankAccountDetail(
 
 	const chartData = [...byDay.values()].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
 
+	const headerAccounts = details.flatMap((detail) => detail.headerAccounts);
+
 	return {
 		accounts,
+		headerAccounts,
 		chartData,
 		chartConfig,
 		isDummyData: details.some((detail) => detail.isDummyData)

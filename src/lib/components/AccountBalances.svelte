@@ -1,14 +1,20 @@
 <script lang="ts">
 	import {
 		accountCategories,
+		balanceDisplayAmount,
+		isDebtAccountLabel,
+		netWorthAmount,
 		netWorthBalanceLabel,
 		type AccountBalanceItem
 	} from '$lib/account-balances';
+	import { accountBalanceIcon } from '$lib/account-balance-icons';
 	import AccountBalancePill from '$lib/components/AccountBalancePill.svelte';
+	import RollingBalanceCounter from '$lib/components/RollingBalanceCounter.svelte';
 
 	let {
 		accounts = [],
 		error = null,
+		loading = false,
 		selectedAccountId = null,
 		netWorthSelected = false,
 		onAccountSelect,
@@ -17,6 +23,7 @@
 	}: {
 		accounts?: AccountBalanceItem[];
 		error?: string | null;
+		loading?: boolean;
 		selectedAccountId?: string | null;
 		netWorthSelected?: boolean;
 		onAccountSelect?: (accountId: string) => void;
@@ -25,6 +32,7 @@
 	} = $props();
 
 	const netWorthLabel = $derived(netWorthBalanceLabel(accounts));
+	const netWorthValue = $derived(netWorthAmount(accounts));
 
 	const accountsByLabel = $derived(
 		Object.fromEntries(accounts.map((account) => [account.label, account]))
@@ -36,7 +44,7 @@
 		<p class="text-center text-sm text-muted-foreground" role="status">{error}</p>
 	{/if}
 
-	{#if accounts.length > 0}
+	{#if loading || accounts.length > 0}
 		<button
 			type="button"
 			class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-[border-color] duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus {netWorthSelected
@@ -44,10 +52,15 @@
 				: 'border-border bg-surface hover:border-secondary focus-visible:border-secondary'}"
 			aria-label="Net worth, {netWorthLabel}"
 			aria-pressed={netWorthSelected}
+			disabled={loading}
 			onclick={() => onNetWorthSelect?.()}
 		>
 			<span class="text-lg leading-none" aria-hidden="true">💰</span>
-			<span class="text-xl font-semibold tabular-nums text-primary">{netWorthLabel}</span>
+			<RollingBalanceCounter
+				size="lg"
+				value={loading ? undefined : (netWorthValue ?? undefined)}
+				staticLabel={!loading && netWorthValue == null ? '—' : undefined}
+			/>
 		</button>
 
 		<div
@@ -60,17 +73,18 @@
 					<div class="flex flex-col gap-2">
 						{#each category.accounts as accountLabel (accountLabel)}
 							{@const account = accountsByLabel[accountLabel]}
-							{#if account}
-								<AccountBalancePill
-									icon={account.icon}
-									label={account.label}
-									balanceLabel={account.balanceLabel}
-									error={account.error}
-									isDebt={account.isDebt}
-									selected={selectedAccountId === account.id}
-									onselect={() => onAccountSelect?.(account.id)}
-								/>
-							{/if}
+							{@const icon = account?.icon ?? accountBalanceIcon(accountLabel) ?? ''}
+							<AccountBalancePill
+								{icon}
+								label={accountLabel}
+								balance={account ? balanceDisplayAmount(account) : undefined}
+								balanceLabel={account?.balanceLabel}
+								error={account?.error}
+								isDebt={account?.isDebt ?? isDebtAccountLabel(accountLabel)}
+								selected={account ? selectedAccountId === account.id : false}
+								{loading}
+								onselect={() => account && onAccountSelect?.(account.id)}
+							/>
 						{/each}
 					</div>
 				</div>

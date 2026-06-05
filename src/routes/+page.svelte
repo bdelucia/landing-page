@@ -5,7 +5,6 @@
 	import { Input, InputIcon, InputSubmit } from '$lib/components/input/index.js';
 	import QuickLink from '$lib/components/QuickLink.svelte';
 	import TransactionList from '$lib/components/TransactionList.svelte';
-	import TransactionListSkeleton from '$lib/components/TransactionListSkeleton.svelte';
 	import WeatherDisplay from '$lib/components/WeatherDisplay.svelte';
 	import WeatherDisplaySkeleton from '$lib/components/WeatherDisplaySkeleton.svelte';
 	import { quickLinks } from '$lib/quick-links';
@@ -60,18 +59,7 @@
 			{/each}
 		</nav>
 
-		{#await data.finances}
-			<TransactionListSkeleton class="w-full shrink-0" />
-		{:then finances}
-			<TransactionList
-				class="w-full shrink-0"
-				accounts={finances.accounts}
-				balancesError={finances.accountBalancesError}
-				bankAccountDetails={finances.bankAccountDetails}
-				transactions={finances.transactions}
-				error={finances.transactionsError}
-			/>
-		{/await}
+		<TransactionList finances={data.finances} class="w-full shrink-0" />
 	</div>
 </div>
 

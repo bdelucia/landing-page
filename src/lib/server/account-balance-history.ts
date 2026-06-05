@@ -50,6 +50,45 @@ function buildChartConfig(accounts: BankAccountItem[], bankLabel?: string): Char
 	return config;
 }
 
+function latestMaskByAccountId(rows: SnapshotRow[]): Map<string, string | null> {
+	const latest = new Map<string, { snapshotTime: string; mask: string | null }>();
+
+	for (const row of rows) {
+		const existing = latest.get(row.accountId);
+		if (!existing || row.snapshotTime > existing.snapshotTime) {
+			latest.set(row.accountId, {
+				snapshotTime: row.snapshotTime,
+				mask: row.accountMask
+			});
+		}
+	}
+
+	return new Map([...latest.entries()].map(([accountId, entry]) => [accountId, entry.mask]));
+}
+
+function hasChartHeaderMask(
+	account: BankAccountItem,
+	latestMaskByAccount: Map<string, string | null>
+): boolean {
+	if (latestMaskByAccount.has(account.id)) {
+		const mask = latestMaskByAccount.get(account.id);
+		return mask != null && mask.trim().length > 0;
+	}
+
+	return account.mask != null && account.mask.trim().length > 0;
+}
+
+function accountsForChartHeader(
+	accounts: BankAccountItem[],
+	snapshotRows: SnapshotRow[]
+): BankAccountItem[] {
+	const latestMaskByAccount = latestMaskByAccountId(snapshotRows);
+	return accounts.filter(
+		(account) =>
+			account.forceChartHeader || hasChartHeaderMask(account, latestMaskByAccount)
+	);
+}
+
 function pivotSnapshots(rows: SnapshotRow[], accounts: BankAccountItem[]): AccountBalanceChartPoint[] {
 	const accountKeys = new Map(accounts.map((account) => [account.id, accountSeriesKey(account.id)]));
 	const byDay = new Map<string, AccountBalanceChartPoint>();
@@ -121,6 +160,7 @@ export function buildAccountBalanceHistory({
 	if (accounts.length === 0) {
 		return {
 			accounts,
+			headerAccounts: [],
 			chartData: [],
 			chartConfig,
 			isDummyData: useDummyData
@@ -135,9 +175,11 @@ export function buildAccountBalanceHistory({
 		tableName
 	);
 	const chartData = pivotSnapshots(snapshotRows, accounts);
+	const headerAccounts = accountsForChartHeader(accounts, snapshotRows);
 
 	return {
 		accounts,
+		headerAccounts,
 		chartData,
 		chartConfig,
 		isDummyData: useDummyData

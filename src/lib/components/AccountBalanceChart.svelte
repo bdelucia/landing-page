@@ -41,13 +41,16 @@
 		maximumFractionDigits: 2
 	});
 
-	const accountKeys = $derived(detail.accounts.map((account) => accountSeriesKey(account.id)));
+	const headerAccounts = $derived(detail.headerAccounts);
+	const singleHeaderAccount = $derived(headerAccounts.length === 1);
+
+	const accountKeys = $derived(headerAccounts.map((account) => accountSeriesKey(account.id)));
 
 	let activeChart = $state<string>('total');
 	let activeTimeRange = $state<ChartTimeRange>('ALL');
 
 	$effect(() => {
-		if (totalOnly) {
+		if (totalOnly || singleHeaderAccount) {
 			activeChart = 'total';
 			return;
 		}
@@ -107,7 +110,7 @@
 			];
 		}
 
-		const account = detail.accounts.find(
+		const account = headerAccounts.find(
 			(entry) => accountSeriesKey(entry.id) === activeChart
 		);
 		const config = chartConfig[activeChart as keyof typeof chartConfig];
@@ -193,7 +196,7 @@
 		'[&_.lc-spline-path]:!stroke-[var(--highlight-color)] [&_.lc-spline-path]:!stroke-[2.5px]';
 
 	const selectorItems = $derived(
-		detail.accounts.map((account) => {
+		headerAccounts.map((account) => {
 			const key = accountSeriesKey(account.id);
 			const hoveredValue = hoveredChartPoint?.[key];
 			const valueLabel =
@@ -267,27 +270,39 @@
 			{:else if !totalOnly}
 				<div class="flex flex-wrap sm:flex-nowrap">
 					{#each selectorItems as item (item.key)}
-						<button
-							type="button"
-							data-active={activeChart === item.key}
-							class="{summaryColumnClass} transition-colors data-[active=true]:bg-surface"
-							aria-pressed={activeChart === item.key}
-							onclick={() => selectChart(item.key)}
-						>
-							<span
-								class="text-xs transition-colors {activeChart === item.key
-									? 'font-medium text-primary'
-									: 'text-muted-foreground'}"
+						{#if singleHeaderAccount}
+							<div class={summaryColumnClass}>
+								<span class="text-xs text-muted-foreground">{item.label}</span>
+								<span
+									class="text-base font-semibold tabular-nums text-primary sm:text-lg"
+									aria-live="polite"
+								>
+									{item.valueLabel}
+								</span>
+							</div>
+						{:else}
+							<button
+								type="button"
+								data-active={activeChart === item.key}
+								class="{summaryColumnClass} group cursor-pointer transition-colors hover:bg-surface data-[active=true]:bg-surface"
+								aria-pressed={activeChart === item.key}
+								onclick={() => selectChart(item.key)}
 							>
-								{item.label}
-							</span>
-							<span
-								class="text-base font-semibold tabular-nums text-primary sm:text-lg"
-								aria-live="polite"
-							>
-								{item.valueLabel}
-							</span>
-						</button>
+								<span
+									class="text-xs transition-colors {activeChart === item.key
+										? 'font-medium text-primary'
+										: 'text-muted-foreground group-hover:text-primary'}"
+								>
+									{item.label}
+								</span>
+								<span
+									class="text-base font-semibold tabular-nums text-primary sm:text-lg"
+									aria-live="polite"
+								>
+									{item.valueLabel}
+								</span>
+							</button>
+						{/if}
 					{/each}
 				</div>
 			{/if}

@@ -1,25 +1,10 @@
-import type { BankAccountDetailsByItem } from '$lib/bank-accounts';
+import type { DashboardFinances, DashboardWeather } from '$lib/dashboard-data';
 import { fetchAccountBalances } from '$lib/server/plaid-balances';
 import { fetchBankAccountDetails } from '$lib/server/plaid-bank-accounts';
 import { fetchCurrentWeather } from '$lib/server/open-weather';
 import { fetchRecentTransactions } from '$lib/server/plaid-transactions';
-import type { AccountBalanceItem } from '$lib/account-balances';
-import type { TransactionItem } from '$lib/transactions';
-import type { WeatherDisplay } from '$lib/weather';
 
-export type DashboardWeather = {
-	weather: WeatherDisplay | null;
-	weatherError: string | null;
-};
-
-export type DashboardFinances = {
-	transactions: TransactionItem[];
-	transactionsError: string | null;
-	accounts: AccountBalanceItem[];
-	accountBalancesError: string | null;
-	bankAccountDetails: BankAccountDetailsByItem;
-	bankAccountDetailsError: string | null;
-};
+export type { DashboardFinances, DashboardWeather } from '$lib/dashboard-data';
 
 export function loadDashboardWeather(): Promise<DashboardWeather> {
 	return fetchCurrentWeather()
