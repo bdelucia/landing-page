@@ -87,6 +87,7 @@ export type FetchAccountBalancesResult = {
 };
 
 const BALANCES_CACHE_TTL_MS = 2 * 60 * 1000;
+const BALANCES_STALE_CACHE_TTL_MS = 10 * 60 * 1000;
 
 export async function fetchAccountBalances(): Promise<FetchAccountBalancesResult> {
 	if (!isPlaidLinked(personalSecrets)) {
@@ -101,7 +102,10 @@ export async function fetchAccountBalances(): Promise<FetchAccountBalancesResult
 		.map((item) => item.itemId ?? item.accessToken)
 		.join(',')}`;
 
-	return withCache(cacheKey, BALANCES_CACHE_TTL_MS, () => fetchAccountBalancesUncached(plaid));
+	return withCache(cacheKey, BALANCES_CACHE_TTL_MS, () => fetchAccountBalancesUncached(plaid), {
+		allowStale: true,
+		staleTtlMs: BALANCES_STALE_CACHE_TTL_MS
+	});
 }
 
 async function fetchAccountBalancesUncached(plaid: PlaidConfig): Promise<FetchAccountBalancesResult> {
