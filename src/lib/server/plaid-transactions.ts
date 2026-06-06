@@ -1,5 +1,6 @@
-import type { Transaction } from 'plaid';
+import type { InvestmentTransaction, Security, Transaction } from 'plaid';
 import { withCache } from '$lib/server/cache';
+import { isInvestingAccountLabel } from '$lib/account-balances';
 import { personalSecrets } from '$lib/server/personal-secrets';
 import { getPlaidLinkedItems, isPlaidLinked } from '$lib/server/integration-config';
 import { formatAccountTypeLabel } from '$lib/server/plaid-account-label';
@@ -28,6 +29,15 @@ function formatCategoryLabel(transaction: Transaction): string {
 	return legacy?.[0] ? toTitleCase(legacy[0]) : 'Other';
 }
 
+function formatInvestmentCategory(transaction: InvestmentTransaction): string {
+	const subtype = transaction.subtype?.trim();
+	if (subtype) {
+		return toTitleCase(subtype);
+	}
+
+	return toTitleCase(transaction.type);
+}
+
 function categoryIcon(category: string): TransactionIcon {
 	const key = category.toLowerCase();
 	if (key.includes('food') || key.includes('restaurant') || key.includes('coffee')) return 'coffee';
@@ -36,7 +46,9 @@ function categoryIcon(category: string): TransactionIcon {
 		key.includes('income') ||
 		key.includes('deposit') ||
 		key.includes('payroll') ||
-		key.includes('transfer in')
+		key.includes('transfer in') ||
+		key.includes('dividend') ||
+		key.includes('interest')
 	)
 		return 'wallet';
 	if (
@@ -79,6 +91,34 @@ function transactionSortKey(transaction: Transaction): string {
 	return transaction.datetime ?? `${transaction.date}T12:00:00`;
 }
 
+function investmentTransactionSortKey(transaction: InvestmentTransaction): string {
+	return transaction.transaction_datetime ?? `${transaction.date}T12:00:00`;
+}
+
+function formatAmountLabel(amount: number): { amountLabel: string; isIncome: boolean } {
+	const isIncome = amount < 0;
+	const amountLabel = isIncome
+		? `+${money.format(Math.abs(amount))}`
+		: `-${money.format(amount)}`;
+
+	return { amountLabel, isIncome };
+}
+
+function resolveInvestmentMerchant(
+	transaction: InvestmentTransaction,
+	securitiesById: Map<string, Security>
+): string {
+	const security = transaction.security_id
+		? securitiesById.get(transaction.security_id)
+		: undefined;
+
+	if (security?.ticker_symbol && security.name) {
+		return `${security.ticker_symbol} · ${security.name}`;
+	}
+
+	return security?.ticker_symbol ?? security?.name ?? transaction.name;
+}
+
 function mapTransaction(
 	transaction: Transaction,
 	sourceId: string,
@@ -86,10 +126,7 @@ function mapTransaction(
 	accountLabels: Map<string, string>
 ): TransactionItem {
 	const category = formatCategoryLabel(transaction);
-	const isIncome = transaction.amount < 0;
-	const amountLabel = isIncome
-		? `+${money.format(Math.abs(transaction.amount))}`
-		: `-${money.format(transaction.amount)}`;
+	const { amountLabel, isIncome } = formatAmountLabel(transaction.amount);
 
 	return {
 		id: transaction.transaction_id,
@@ -106,9 +143,42 @@ function mapTransaction(
 	};
 }
 
+function mapInvestmentTransaction(
+	transaction: InvestmentTransaction,
+	sourceId: string,
+	bankLabel: string,
+	accountLabels: Map<string, string>,
+	securitiesById: Map<string, Security>
+): TransactionItem {
+	const category = formatInvestmentCategory(transaction);
+	const { amountLabel, isIncome } = formatAmountLabel(transaction.amount);
+
+	return {
+		id: transaction.investment_transaction_id,
+		sourceId,
+		bankLabel,
+		accountLabel: accountLabels.get(transaction.account_id) ?? 'Account',
+		merchant: resolveInvestmentMerchant(transaction, securitiesById),
+		category,
+		dateLabel: formatTransactionDate(transaction.date, transaction.transaction_datetime),
+		sortDate: investmentTransactionSortKey(transaction),
+		amountLabel,
+		isIncome,
+		icon: categoryIcon(category)
+	};
+}
+
 function sortByRecency(transactions: Transaction[]): Transaction[] {
 	return [...transactions].sort((a, b) =>
 		transactionSortKey(b).localeCompare(transactionSortKey(a))
+	);
+}
+
+function sortInvestmentsByRecency(
+	transactions: InvestmentTransaction[]
+): InvestmentTransaction[] {
+	return [...transactions].sort((a, b) =>
+		investmentTransactionSortKey(b).localeCompare(investmentTransactionSortKey(a))
 	);
 }
 
@@ -123,18 +193,34 @@ function mapTransactions(
 	);
 }
 
+function mapInvestmentTransactions(
+	transactions: InvestmentTransaction[],
+	sourceId: string,
+	bankLabel: string,
+	accountLabels: Map<string, string>,
+	securitiesById: Map<string, Security>
+): TransactionItem[] {
+	return transactions.map((transaction) =>
+		mapInvestmentTransaction(transaction, sourceId, bankLabel, accountLabels, securitiesById)
+	);
+}
+
 function sortTransactionItems(transactions: TransactionItem[]): TransactionItem[] {
 	return [...transactions].sort((a, b) => b.sortDate.localeCompare(a.sortDate));
 }
 
-async function fetchTransactionsForItem(
+function resolveItemLabel(item: PlaidLinkedItem): string {
+	return item.label?.trim() ?? 'Account';
+}
+
+async function fetchBankingTransactionsForItem(
 	plaid: PlaidConfig,
 	item: PlaidLinkedItem,
 	count: number
 ): Promise<{ transactions: TransactionItem[]; error: string | null }> {
 	const client = createPlaidClient(plaid);
 	const sourceId = item.itemId ?? item.accessToken;
-	const bankLabel = item.label?.trim() ?? 'Account';
+	const bankLabel = resolveItemLabel(item);
 
 	try {
 		const transactionsResponse = await client.transactionsGet({
@@ -162,6 +248,62 @@ async function fetchTransactionsForItem(
 	}
 }
 
+async function fetchInvestmentTransactionsForItem(
+	plaid: PlaidConfig,
+	item: PlaidLinkedItem,
+	count: number
+): Promise<{ transactions: TransactionItem[]; error: string | null }> {
+	const client = createPlaidClient(plaid);
+	const sourceId = item.itemId ?? item.accessToken;
+	const bankLabel = resolveItemLabel(item);
+
+	try {
+		const response = await client.investmentsTransactionsGet({
+			access_token: item.accessToken,
+			start_date: toDateString(90),
+			end_date: toDateString(0),
+			options: { count, offset: 0 }
+		});
+
+		const { investment_transactions, accounts, securities } = response.data;
+		const accountLabels = new Map(
+			accounts.map((account) => [account.account_id, formatAccountTypeLabel(account)])
+		);
+		const securitiesById = new Map(securities.map((security) => [security.security_id, security]));
+		const sorted = sortInvestmentsByRecency(investment_transactions);
+
+		return {
+			transactions: mapInvestmentTransactions(
+				sorted,
+				sourceId,
+				bankLabel,
+				accountLabels,
+				securitiesById
+			),
+			error: null
+		};
+	} catch (error) {
+		return {
+			transactions: [],
+			error: formatPlaidApiError(error)
+		};
+	}
+}
+
+async function fetchTransactionsForItem(
+	plaid: PlaidConfig,
+	item: PlaidLinkedItem,
+	count: number
+): Promise<{ transactions: TransactionItem[]; error: string | null }> {
+	const label = resolveItemLabel(item);
+
+	if (isInvestingAccountLabel(label)) {
+		return fetchInvestmentTransactionsForItem(plaid, item, count);
+	}
+
+	return fetchBankingTransactionsForItem(plaid, item, count);
+}
+
 export type FetchTransactionsResult = {
 	transactions: TransactionItem[];
 	error: string | null;
@@ -178,7 +320,7 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = personalSecrets;
-	const cacheKey = `plaid-transactions:v2:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
+	const cacheKey = `plaid-transactions:v3:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
 		.map((item) => item.itemId ?? item.accessToken)
 		.join(',')}`;
 

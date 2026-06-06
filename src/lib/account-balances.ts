@@ -96,6 +96,10 @@ export function accountCategoryForLabel(label: string): AccountCategoryKey | nul
 	return null;
 }
 
+export function isInvestingAccountLabel(label: string): boolean {
+	return accountCategoryForLabel(label) === 'investing';
+}
+
 export function categoryBalanceSummaries(accounts: AccountBalanceItem[]): CategoryBalanceSummary[] {
 	const totals = new Map<AccountCategoryKey, number>(
 		accountCategories.map((category) => [category.key, 0])

@@ -64,7 +64,9 @@ function inferTypeFromName(name: string | null | undefined): string | null {
 	return null;
 }
 
-export function formatAccountTypeLabel(account: AccountBase): string {
+type AccountLabelInput = Pick<AccountBase, 'name' | 'type' | 'subtype'>;
+
+export function formatAccountTypeLabel(account: AccountLabelInput): string {
 	const fromSubtype = account.subtype?.trim();
 	if (fromSubtype) return titleCase(fromSubtype);
 
