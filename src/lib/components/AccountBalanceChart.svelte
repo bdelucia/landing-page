@@ -15,6 +15,7 @@
 		filterChartDataByRange,
 		type ChartTimeRange
 	} from '$lib/chart-time-range';
+	import AnimatedBalanceCounter from '$lib/components/AnimatedBalanceCounter.svelte';
 	import { LineChart } from 'layerchart';
 
 	let {
@@ -152,18 +153,16 @@
 		);
 	});
 
-	const displayedTotalLabel = $derived.by(() => {
+	const displayedTotalValue = $derived.by(() => {
 		if (hoveredChartPoint) {
-			const hoveredTotal = detail.accounts.reduce((sum, account) => {
+			return detail.accounts.reduce((sum, account) => {
 				const key = accountSeriesKey(account.id);
 				const value = hoveredChartPoint[key];
 				return sum + (typeof value === 'number' ? value : 0);
 			}, 0);
-
-			return balanceMoney.format(hoveredTotal);
 		}
 
-		return balanceMoney.format(totalBalance);
+		return totalBalance;
 	});
 
 	const hoverDatePosition = $derived.by(() => {
@@ -199,15 +198,11 @@
 		headerAccounts.map((account) => {
 			const key = accountSeriesKey(account.id);
 			const hoveredValue = hoveredChartPoint?.[key];
-			const valueLabel =
-				typeof hoveredValue === 'number'
-					? balanceMoney.format(hoveredValue)
-					: account.balanceLabel;
 
 			return {
 				key,
 				label: account.typeLabel,
-				valueLabel
+				value: typeof hoveredValue === 'number' ? hoveredValue : account.balance
 			};
 		})
 	);
@@ -219,8 +214,7 @@
 			return {
 				key: category.key,
 				label: category.label,
-				valueLabel:
-					hoveredTotal != null ? balanceMoney.format(hoveredTotal) : category.balanceLabel
+				value: hoveredTotal ?? category.balance
 			};
 		})
 	);
@@ -244,12 +238,12 @@
 		<div class="flex flex-col items-stretch border-b border-border sm:flex-row">
 			<div class="flex flex-1 items-center gap-3 px-5 py-4 sm:px-6 sm:py-5">
 				<span class="text-sm font-medium text-muted-foreground">Total</span>
-				<span
-					class="text-2xl font-semibold tabular-nums text-primary sm:text-3xl"
-					role="status"
-					aria-live="polite"
-				>
-					{displayedTotalLabel}
+				<span class="text-2xl font-semibold text-primary sm:text-3xl" role="status" aria-live="polite">
+					<AnimatedBalanceCounter
+						value={displayedTotalValue}
+						format={(amount) => balanceMoney.format(amount)}
+						class="font-semibold"
+					/>
 				</span>
 			</div>
 
@@ -258,11 +252,12 @@
 					{#each categoryHeaderItems as item (item.key)}
 						<div class={summaryColumnClass}>
 							<span class="text-xs text-muted-foreground">{item.label}</span>
-							<span
-								class="text-base font-semibold tabular-nums text-primary sm:text-lg"
-								aria-live="polite"
-							>
-								{item.valueLabel}
+							<span class="text-base font-semibold text-primary sm:text-lg" aria-live="polite">
+								<AnimatedBalanceCounter
+									value={item.value}
+									format={(amount) => balanceMoney.format(amount)}
+									class="font-semibold"
+								/>
 							</span>
 						</div>
 					{/each}
@@ -273,11 +268,12 @@
 						{#if singleHeaderAccount}
 							<div class={summaryColumnClass}>
 								<span class="text-xs text-muted-foreground">{item.label}</span>
-								<span
-									class="text-base font-semibold tabular-nums text-primary sm:text-lg"
-									aria-live="polite"
-								>
-									{item.valueLabel}
+								<span class="text-base font-semibold text-primary sm:text-lg" aria-live="polite">
+									<AnimatedBalanceCounter
+										value={item.value}
+										format={(amount) => balanceMoney.format(amount)}
+										class="font-semibold"
+									/>
 								</span>
 							</div>
 						{:else}
@@ -295,11 +291,12 @@
 								>
 									{item.label}
 								</span>
-								<span
-									class="text-base font-semibold tabular-nums text-primary sm:text-lg"
-									aria-live="polite"
-								>
-									{item.valueLabel}
+								<span class="text-base font-semibold text-primary sm:text-lg" aria-live="polite">
+									<AnimatedBalanceCounter
+										value={item.value}
+										format={(amount) => balanceMoney.format(amount)}
+										class="font-semibold"
+									/>
 								</span>
 							</button>
 						{/if}
