@@ -17,10 +17,6 @@ import {
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
 	getDatabase
 } from '$lib/server/db/database';
-import {
-	dummySnapshotAccountFromBankItem,
-	ensureDummyBalanceSnapshots
-} from '$lib/server/balances/dummy-balance-snapshots';
 import { getPlaidLinkedItems } from '$lib/server/config/integration-config';
 import {
 	formatChartAccountTypeLabel,
@@ -110,7 +106,10 @@ export function fetchLatestSnapshotRows(
 	return statement.all() as LatestSnapshotRow[];
 }
 
-function rowsForItem(rows: LatestSnapshotRow[], item: PlaidLinkedItem): LatestSnapshotRow[] {
+export function snapshotRowsForItem(
+	rows: LatestSnapshotRow[],
+	item: PlaidLinkedItem
+): LatestSnapshotRow[] {
 	const itemKey = resolveItemKey(item);
 	const itemLabel = resolveItemLabel(item);
 
@@ -163,8 +162,11 @@ export type LatestBalancesFromDbResult = {
 
 export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFromDbResult {
 	const linkedItems = getPlaidLinkedItems(plaid);
-	const useDummyHistory = plaid.environment === 'sandbox';
-	const snapshotRows = fetchLatestSnapshotRows();
+	const useDummyData = plaid.environment === 'sandbox';
+	const snapshotTable = useDummyData
+		? ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE
+		: ACCOUNT_BALANCE_SNAPSHOTS_TABLE;
+	const snapshotRows = fetchLatestSnapshotRows(snapshotTable);
 	const byItemId: BankAccountDetailsByItem = {};
 	const accounts: AccountBalanceItem[] = [];
 	const missingItems: string[] = [];
@@ -174,7 +176,7 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		const itemLabel = resolveItemLabel(item);
 		const isDebt = isDebtAccountLabel(itemLabel);
 		const icon = accountBalanceIcon(itemLabel);
-		const itemRows = rowsForItem(snapshotRows, item);
+		const itemRows = snapshotRowsForItem(snapshotRows, item);
 
 		if (itemRows.length === 0) {
 			missingItems.push(itemLabel);
@@ -185,12 +187,14 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 				balanceLabel: '—',
 				balance: null,
 				isDebt,
-				error: `No balance snapshots yet for "${itemLabel}". Waiting for Plaid webhook or cron sync.`
+				error: useDummyData
+					? `No dummy balance snapshots yet for "${itemLabel}".`
+					: `No balance snapshots yet for "${itemLabel}". Waiting for Plaid webhook or cron sync.`
 			});
 			byItemId[itemKey] = buildAccountBalanceHistory({
 				accounts: [],
 				bankLabel: itemLabel,
-				useDummyData: useDummyHistory
+				useDummyData
 			});
 			continue;
 		}
@@ -198,23 +202,6 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		const bankAccounts = itemRows
 			.map((row) => mapSnapshotRowToBankAccount(row, itemKey, itemLabel, isDebt))
 			.sort((a, b) => a.typeLabel.localeCompare(b.typeLabel));
-
-		if (useDummyHistory && bankAccounts.length > 0) {
-			ensureDummyBalanceSnapshots(
-				bankAccounts.map((account) => {
-					const row = itemRows.find((entry) => entry.accountId === account.id);
-
-					return dummySnapshotAccountFromBankItem(
-						account,
-						row?.accountName ?? account.typeLabel,
-						row?.accountType ?? null,
-						row?.accountSubtype ?? null
-					);
-				}),
-				itemLabel,
-				item.itemId ?? null
-			);
-		}
 
 		const rawTotal = itemRows.reduce((total, row) => total + snapshotBalanceAmount(row), 0);
 
@@ -230,7 +217,7 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		byItemId[itemKey] = buildAccountBalanceHistory({
 			accounts: bankAccounts,
 			bankLabel: itemLabel,
-			useDummyData: useDummyHistory
+			useDummyData
 		});
 	}
 
@@ -241,8 +228,9 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		return {
 			accounts: sortedAccounts,
 			byItemId,
-			error:
-				'No balance snapshots in SQLite yet. Configure the Plaid webhook or run `pnpm update-balances` once.',
+			error: useDummyData
+				? 'No balance snapshots in the dummy SQLite table yet. Sandbox mode seeds from Plaid automatically when tokens are valid.'
+				: 'No balance snapshots in SQLite yet. Configure the Plaid webhook or run `pnpm update-balances` once.',
 			hasData: false
 		};
 	}

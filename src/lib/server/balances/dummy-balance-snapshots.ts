@@ -1,3 +1,4 @@
+import type { AccountBase } from 'plaid';
 import type { BankAccountItem } from '$lib/hooks/finances/bank-accounts';
 import { ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE, getDatabase } from '$lib/server/db/database';
 
@@ -745,6 +746,19 @@ export function ensureDummyBalanceSnapshots(
 		if (hasDummySnapshots(account.accountId)) continue;
 		insertDummySnapshotsForAccount(account, itemLabel, itemId, totalDays);
 	}
+}
+
+export function dummySnapshotAccountFromPlaidAccount(account: AccountBase): DummySnapshotAccount {
+	const balance = account.balances.current ?? account.balances.available ?? 0;
+
+	return {
+		accountId: account.account_id,
+		accountName: account.name,
+		accountMask: account.mask ?? null,
+		accountType: account.type ?? null,
+		accountSubtype: account.subtype ?? null,
+		balance
+	};
 }
 
 export function dummySnapshotAccountFromBankItem(

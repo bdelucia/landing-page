@@ -1,6 +1,7 @@
 import { apiSecrets } from '$lib/server/config/secrets';
 import { isPlaidLinked } from '$lib/server/config/integration-config';
 import { loadLatestBalancesFromDb } from '$lib/server/balances/latest-balance-snapshots';
+import { prepareBalanceSnapshots } from '$lib/server/balances/sandbox-balance-snapshots';
 import type { AccountBalanceItem } from '$lib/hooks/finances/account-balances';
 
 export type FetchAccountBalancesResult = {
@@ -16,6 +17,7 @@ export async function fetchAccountBalances(): Promise<FetchAccountBalancesResult
 		};
 	}
 
+	await prepareBalanceSnapshots(apiSecrets.plaid);
 	const { accounts, error } = loadLatestBalancesFromDb(apiSecrets.plaid);
 
 	return {
