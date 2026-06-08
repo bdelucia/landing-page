@@ -42,16 +42,6 @@ type FetchSnapshotInput = {
 	tableName: typeof ACCOUNT_BALANCE_SNAPSHOTS_TABLE | typeof ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE;
 };
 
-export type BalanceChartItemDiagnostics = {
-	label: string;
-	scopedAccountCount: number;
-	fetchedRowCount: number;
-	fetchedDistinctSnapshotDays: number;
-	chartPointCount: number;
-	chartDayRange: { start: string | null; end: string | null };
-	chartSortDates: string[];
-};
-
 function toDayKey(snapshotTime: string): string {
 	return isoInstantToDayKey(snapshotTime);
 }
@@ -227,61 +217,6 @@ function fetchSnapshotRows(input: FetchSnapshotInput): SnapshotRow[] {
 		accountMask: row.accountMask,
 		balanceCurrent: row.balanceCurrent
 	}));
-}
-
-function distinctSnapshotDays(rows: SnapshotRow[]): number {
-	return new Set(rows.map((row) => toDayKey(row.snapshotTime))).size;
-}
-
-export function diagnoseBalanceChartForItem({
-	accounts,
-	bankLabel,
-	itemId = null,
-	useDummyData
-}: Omit<BuildHistoryInput, 'itemIsDebt'>): BalanceChartItemDiagnostics {
-	const label = bankLabel ?? 'unknown';
-	const tableName = useDummyData
-		? ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE
-		: ACCOUNT_BALANCE_SNAPSHOTS_TABLE;
-
-	if (accounts.length === 0 || !bankLabel) {
-		return {
-			label,
-			scopedAccountCount: 0,
-			fetchedRowCount: 0,
-			fetchedDistinctSnapshotDays: 0,
-			chartPointCount: 0,
-			chartDayRange: { start: null, end: null },
-			chartSortDates: []
-		};
-	}
-
-	const scopedAccountIds = resolveScopedAccountIdsForItem({
-		accountIds: accounts.map((account) => account.id),
-		itemLabel: bankLabel,
-		itemId,
-		tableName
-	});
-	const snapshotRows = fetchSnapshotRows({
-		accountIds: accounts.map((account) => account.id),
-		itemLabel: bankLabel,
-		itemId,
-		tableName
-	});
-	const chartData = buildDailyChartPoints(snapshotRows, accounts);
-
-	return {
-		label,
-		scopedAccountCount: scopedAccountIds.length,
-		fetchedRowCount: snapshotRows.length,
-		fetchedDistinctSnapshotDays: distinctSnapshotDays(snapshotRows),
-		chartPointCount: chartData.length,
-		chartDayRange: {
-			start: chartData[0]?.sortDate ?? null,
-			end: chartData.at(-1)?.sortDate ?? null
-		},
-		chartSortDates: chartData.map((point) => point.sortDate)
-	};
 }
 
 export function buildAccountBalanceHistory({

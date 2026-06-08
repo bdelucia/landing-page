@@ -32,11 +32,6 @@ function resolveDatabasePath(): string {
 	return dbPath;
 }
 
-/** Exposes the SQLite path actually used after legacy Docker path correction. */
-export function getResolvedDatabasePath(): string {
-	return resolveDatabasePath();
-}
-
 /** Maps legacy `/app/data/finance.sqlite` to the mounted `/app/database/finance.sqlite` path. */
 function toMountedDockerDatabasePath(dbPath: string): string | null {
 	const normalized = dbPath.replace(/\\/g, '/');
