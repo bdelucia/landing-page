@@ -1,5 +1,5 @@
-import { mkdirSync } from 'node:fs';
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 const DEFAULT_SQLITE_DB_PATH = 'database/finance.sqlite';
@@ -55,6 +55,49 @@ function ensureBalanceSnapshotTable(
 	`);
 }
 
+function legacyDatabasePath(dbPath: string): string {
+	const directory = dirname(dbPath);
+	const fileName = dbPath.slice(directory.length + 1);
+
+	if (directory.endsWith('/database') || directory.endsWith('\\database')) {
+		return join(dirname(directory), 'data', fileName);
+	}
+
+	return resolve(directory, '../data', fileName);
+}
+
+function migrateLegacyDatabaseIfNeeded(dbPath: string): void {
+	if (existsSync(dbPath)) return;
+
+	const legacyPath = legacyDatabasePath(dbPath);
+	if (!existsSync(legacyPath)) return;
+
+	mkdirSync(dirname(dbPath), { recursive: true });
+	copyFileSync(legacyPath, dbPath);
+	console.warn(
+		`Migrated SQLite database from ${legacyPath} to ${dbPath}. You can remove the old file after verifying balances.`
+	);
+}
+
+function warnIfLegacyDatabaseHasMoreHistory(dbPath: string): void {
+	const legacyPath = legacyDatabasePath(dbPath);
+	if (!existsSync(dbPath) || !existsSync(legacyPath)) return;
+
+	try {
+		const currentSize = statSync(dbPath).size;
+		const legacySize = statSync(legacyPath).size;
+
+		if (legacySize > currentSize * 1.5) {
+			console.warn(
+				`Legacy SQLite database at ${legacyPath} is larger than ${dbPath}. ` +
+					'Balance history may still be in the old data/ folder — copy or merge it into database/ if the chart looks empty.'
+			);
+		}
+	} catch {
+		// Non-fatal: size check is best-effort guidance only.
+	}
+}
+
 function ensureSchema(db: DatabaseSync): void {
 	ensureBalanceSnapshotTable(db, ACCOUNT_BALANCE_SNAPSHOTS_TABLE, 'account_balance_snapshots');
 	ensureBalanceSnapshotTable(
@@ -70,6 +113,8 @@ export function getDatabase(): DatabaseSync {
 	}
 
 	const dbPath = resolveDatabasePath();
+	migrateLegacyDatabaseIfNeeded(dbPath);
+	warnIfLegacyDatabaseHasMoreHistory(dbPath);
 	mkdirSync(dirname(dbPath), { recursive: true });
 	database = new DatabaseSync(dbPath);
 	ensureSchema(database);

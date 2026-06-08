@@ -6,6 +6,7 @@ import {
 	type BankAccountItem
 } from '$lib/hooks/finances/bank-accounts';
 import { chartColorForAccount, type ChartConfig } from '$lib/components/ui/chart/chart-utils';
+import { formatChartDayLabel, isoInstantToDayKey } from '$lib/hooks/chart/chart-date';
 import {
 	ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
@@ -26,13 +27,8 @@ type BuildHistoryInput = {
 	useDummyData: boolean;
 };
 
-function formatChartDate(isoDate: string): string {
-	const date = new Date(`${isoDate.slice(0, 10)}T12:00:00`);
-	return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 function toDayKey(snapshotTime: string): string {
-	return snapshotTime.slice(0, 10);
+	return isoInstantToDayKey(snapshotTime);
 }
 
 function buildChartConfig(accounts: BankAccountItem[], bankLabel?: string): ChartConfig {
@@ -103,7 +99,7 @@ function pivotSnapshots(
 
 		const dayKey = toDayKey(row.snapshotTime);
 		const existing = byDay.get(dayKey) ?? {
-			date: formatChartDate(dayKey),
+			date: formatChartDayLabel(dayKey),
 			sortDate: dayKey
 		};
 

@@ -15,6 +15,7 @@
 		filterChartDataByRange,
 		type ChartTimeRange
 	} from '$lib/hooks/chart/chart-time-range';
+	import { formatChartDayLabel } from '$lib/hooks/chart/chart-date';
 	import AnimatedBalanceCounter from '$lib/components/balance/AnimatedBalanceCounter.svelte';
 	import { LineChart } from 'layerchart';
 
@@ -119,9 +120,8 @@
 		];
 	});
 
-	function formatHoverDate(isoDate: string): string {
-		const date = new Date(`${isoDate.slice(0, 10)}T12:00:00`);
-		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	function formatHoverDate(dayKey: string): string {
+		return formatChartDayLabel(dayKey, true);
 	}
 
 	const chartHeight = 240;
