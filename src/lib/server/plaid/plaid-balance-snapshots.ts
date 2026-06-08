@@ -2,6 +2,10 @@ import type { AccountBase } from 'plaid';
 import { getDatabase } from '$lib/server/db/database';
 import { getPlaidLinkedItems, isPlaidLinked } from '$lib/server/config/integration-config';
 import { apiSecrets } from '$lib/server/config/secrets';
+import {
+	findLinkedItemByPlaidItemId,
+	resolvePlaidItemIdForItem
+} from '$lib/server/plaid/plaid-item-registry';
 import { createPlaidClient, formatPlaidApiError } from '$lib/server/plaid/plaid';
 import type { PlaidConfig, PlaidLinkedItem } from '$data/api-config.types';
 
@@ -36,12 +40,13 @@ function resolveItemLabel(item: PlaidLinkedItem): string {
 function toSnapshotRow(
 	account: AccountBase,
 	item: PlaidLinkedItem,
-	snapshotTime: string
+	snapshotTime: string,
+	plaidItemId: string | null = item.itemId ?? null
 ): SnapshotRow {
 	return {
 		snapshotTime,
 		itemLabel: resolveItemLabel(item),
-		itemId: item.itemId ?? null,
+		itemId: plaidItemId,
 		accountId: account.account_id,
 		accountName: account.name,
 		accountMask: account.mask ?? null,
@@ -58,26 +63,15 @@ function toSnapshotRow(
 async function fetchRowsForItem(
 	plaid: PlaidConfig,
 	item: PlaidLinkedItem,
-	snapshotTime: string
+	snapshotTime: string,
+	plaidItemId: string | null = null
 ): Promise<SnapshotRow[]> {
+	const resolvedItemId = plaidItemId ?? (await resolvePlaidItemIdForItem(plaid, item));
 	const client = createPlaidClient(plaid);
 	const response = await client.accountsBalanceGet({ access_token: item.accessToken });
-	return response.data.accounts.map((account) => toSnapshotRow(account, item, snapshotTime));
-}
-
-function findLinkedItemByPlaidItemId(
-	plaid: PlaidConfig,
-	plaidItemId: string
-): PlaidLinkedItem | null {
-	const linkedItems = getPlaidLinkedItems(plaid);
-
-	for (const item of linkedItems) {
-		if (item.itemId === plaidItemId) {
-			return item;
-		}
-	}
-
-	return null;
+	return response.data.accounts.map((account) =>
+		toSnapshotRow(account, item, snapshotTime, resolvedItemId)
+	);
 }
 
 export type RecordPlaidBalanceSnapshotForItemResult = {
@@ -105,7 +99,7 @@ export async function recordPlaidBalanceSnapshotForItem(
 	}
 
 	const { plaid } = apiSecrets;
-	const item = findLinkedItemByPlaidItemId(plaid, plaidItemId);
+	const item = await findLinkedItemByPlaidItemId(plaid, plaidItemId);
 
 	if (!item) {
 		return {
@@ -118,7 +112,7 @@ export async function recordPlaidBalanceSnapshotForItem(
 	}
 
 	try {
-		const rows = await fetchRowsForItem(plaid, item, snapshotTime);
+		const rows = await fetchRowsForItem(plaid, item, snapshotTime, plaidItemId);
 		const inserted = insertSnapshotRows(rows);
 
 		return {

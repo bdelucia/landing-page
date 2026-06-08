@@ -18,7 +18,7 @@ export const apiSecrets: ApiSecrets = {
 	// 	secret: '', // must match environment (sandbox vs production keys)
 	// 	environment: 'sandbox', // sandbox | development | production
 	// 	accessToken: '', // one bank: single token for all accounts at that institution
-	// 	itemId: '', // optional; same Item as accessToken
+	// 	itemId: '', // optional; webhooks resolve this automatically from accessToken
 	// 	// Multiple banks: one entry per Link session (each with its own accessToken)
 	// 	// items: [
 	// 	// 	{ accessToken: '', itemId: '', label: 'AZFCU' },

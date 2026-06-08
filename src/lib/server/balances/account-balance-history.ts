@@ -24,7 +24,16 @@ type SnapshotRow = {
 type BuildHistoryInput = {
 	accounts: BankAccountItem[];
 	bankLabel?: string;
+	itemId?: string | null;
+	itemIsDebt?: boolean;
 	useDummyData: boolean;
+};
+
+type FetchSnapshotInput = {
+	accountIds: string[];
+	itemLabel?: string;
+	itemId?: string | null;
+	tableName: typeof ACCOUNT_BALANCE_SNAPSHOTS_TABLE | typeof ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE;
 };
 
 function toDayKey(snapshotTime: string): string {
@@ -84,56 +93,89 @@ function accountsForChartHeader(
 	);
 }
 
+function latestSnapshotPerAccountDay(rows: SnapshotRow[]): SnapshotRow[] {
+	const latest = new Map<string, SnapshotRow>();
+
+	for (const row of rows) {
+		const mapKey = `${toDayKey(row.snapshotTime)}\0${row.accountId}`;
+		const existing = latest.get(mapKey);
+		if (!existing || row.snapshotTime > existing.snapshotTime) {
+			latest.set(mapKey, row);
+		}
+	}
+
+	return [...latest.values()].sort((a, b) => a.snapshotTime.localeCompare(b.snapshotTime));
+}
+
 function pivotSnapshots(
 	rows: SnapshotRow[],
-	accounts: BankAccountItem[]
+	accounts: BankAccountItem[],
+	itemIsDebt = false
 ): AccountBalanceChartPoint[] {
-	const accountKeys = new Map(
-		accounts.map((account) => [account.id, accountSeriesKey(account.id)])
+	const debtByAccountId = new Map(
+		accounts.map((account) => [account.id, account.isDebt ?? itemIsDebt])
 	);
 	const byDay = new Map<string, AccountBalanceChartPoint>();
 
 	for (const row of rows) {
-		const seriesKey = accountKeys.get(row.accountId);
-		if (!seriesKey) continue;
-
+		const seriesKey = accountSeriesKey(row.accountId);
 		const dayKey = toDayKey(row.snapshotTime);
 		const existing = byDay.get(dayKey) ?? {
 			date: formatChartDayLabel(dayKey),
 			sortDate: dayKey
 		};
 
-		const account = accounts.find((entry) => entry.id === row.accountId);
+		const isDebt = debtByAccountId.get(row.accountId) ?? itemIsDebt;
 		const balance = row.balanceCurrent;
-		existing[seriesKey] = account?.isDebt ? -Math.abs(balance) : balance;
+		existing[seriesKey] = isDebt ? -Math.abs(balance) : balance;
 		byDay.set(dayKey, existing);
 	}
 
 	return [...byDay.values()].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
 }
 
-function fetchSnapshotRows(
-	accountIds: string[],
-	tableName: typeof ACCOUNT_BALANCE_SNAPSHOTS_TABLE | typeof ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE
-): SnapshotRow[] {
-	if (accountIds.length === 0) return [];
+function fetchSnapshotRows({
+	accountIds,
+	itemLabel,
+	itemId,
+	tableName
+}: FetchSnapshotInput): SnapshotRow[] {
+	const scopeClauses: string[] = [];
+	const params: Array<string> = [];
+
+	if (itemLabel) {
+		scopeClauses.push('plaid_item_label = ?');
+		params.push(itemLabel);
+	}
+
+	if (itemId) {
+		scopeClauses.push('plaid_item_id = ?');
+		params.push(itemId);
+	}
+
+	if (accountIds.length > 0) {
+		const placeholders = accountIds.map(() => '?').join(', ');
+		scopeClauses.push(`plaid_account_id IN (${placeholders})`);
+		params.push(...accountIds);
+	}
+
+	if (scopeClauses.length === 0) return [];
 
 	const db = getDatabase();
-	const placeholders = accountIds.map(() => '?').join(', ');
 	const statement = db.prepare(`
 		SELECT
 			snapshot_time AS snapshotTime,
 			plaid_account_id AS accountId,
 			account_name AS accountName,
 			account_mask AS accountMask,
-			balance_current AS balanceCurrent
+			COALESCE(balance_current, balance_available) AS balanceCurrent
 		FROM ${tableName}
-		WHERE plaid_account_id IN (${placeholders})
-			AND balance_current IS NOT NULL
+		WHERE (${scopeClauses.join(' OR ')})
+			AND COALESCE(balance_current, balance_available) IS NOT NULL
 		ORDER BY snapshot_time ASC
 	`);
 
-	const rows = statement.all(...accountIds) as Array<{
+	const rows = statement.all(...params) as Array<{
 		snapshotTime: string;
 		accountId: string;
 		accountName: string;
@@ -153,6 +195,8 @@ function fetchSnapshotRows(
 export function buildAccountBalanceHistory({
 	accounts,
 	bankLabel,
+	itemId = null,
+	itemIsDebt = false,
 	useDummyData
 }: BuildHistoryInput): BankAccountDetail {
 	const chartConfig = buildChartConfig(accounts, bankLabel);
@@ -170,11 +214,15 @@ export function buildAccountBalanceHistory({
 	const tableName = useDummyData
 		? ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE
 		: ACCOUNT_BALANCE_SNAPSHOTS_TABLE;
-	const snapshotRows = fetchSnapshotRows(
-		accounts.map((account) => account.id),
-		tableName
+	const snapshotRows = latestSnapshotPerAccountDay(
+		fetchSnapshotRows({
+			accountIds: accounts.map((account) => account.id),
+			itemLabel: bankLabel,
+			itemId,
+			tableName
+		})
 	);
-	const chartData = pivotSnapshots(snapshotRows, accounts);
+	const chartData = pivotSnapshots(snapshotRows, accounts, itemIsDebt);
 	const headerAccounts = accountsForChartHeader(accounts, snapshotRows);
 
 	return {

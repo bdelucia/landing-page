@@ -39,7 +39,7 @@ export type OpenWeatherConfig = {
 export type PlaidLinkedItem = {
 	/** `access_token` from Link `onSuccess` for this Item */
 	accessToken: string;
-	/** `item_id` for the same Item (optional) */
+	/** `item_id` for the same Item (optional; auto-discovered from `accessToken` for webhooks) */
 	itemId?: string;
 	/**
 	 * Shown in the UI when you link more than one Item (e.g. `"Chase"`, `"Amex"`).
@@ -73,7 +73,7 @@ export type PlaidConfig = {
 	 * Single linked Item (simple setup). Use `items` instead when you have multiple banks.
 	 */
 	accessToken?: string;
-	/** `item_id` for the same Item as `accessToken` (optional) */
+	/** `item_id` for the same Item as `accessToken` (optional; auto-discovered for webhooks) */
 	itemId?: string;
 	/** One entry per linked institution when you have more than one `access_token` */
 	items?: PlaidLinkedItem[];

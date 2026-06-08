@@ -8,6 +8,7 @@
 	import {
 		accountSeriesKey,
 		categoryTotalsFromChartPoint,
+		chartPointTotal,
 		type BankAccountDetail
 	} from '$lib/hooks/finances/bank-accounts';
 	import {
@@ -82,15 +83,10 @@
 	const filteredChartData = $derived(filterChartDataByRange(detail.chartData, activeTimeRange));
 
 	const totalChartData = $derived(
-		filteredChartData.map((point) => {
-			const total = detail.accounts.reduce((sum, account) => {
-				const key = accountSeriesKey(account.id);
-				const value = point[key];
-				return sum + (typeof value === 'number' ? value : 0);
-			}, 0);
-
-			return { ...point, total };
-		})
+		filteredChartData.map((point) => ({
+			...point,
+			total: chartPointTotal(point)
+		}))
 	);
 
 	const chartDataForDisplay = $derived(
@@ -143,11 +139,13 @@
 
 	const displayedTotalValue = $derived.by(() => {
 		if (hoveredChartPoint) {
-			return detail.accounts.reduce((sum, account) => {
-				const key = accountSeriesKey(account.id);
-				const value = hoveredChartPoint[key];
-				return sum + (typeof value === 'number' ? value : 0);
-			}, 0);
+			if (activeChart === 'total') {
+				return chartPointTotal(hoveredChartPoint);
+			}
+
+			const key = activeChart;
+			const value = hoveredChartPoint[key];
+			return typeof value === 'number' ? value : totalBalance;
 		}
 
 		return totalBalance;

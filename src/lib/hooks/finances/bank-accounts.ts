@@ -40,6 +40,14 @@ export function accountSeriesKey(accountId: string): string {
 	return `acct_${accountId.replace(/[^a-zA-Z0-9]/g, '_')}`;
 }
 
+/** Sums every account series value stored on a chart point. */
+export function chartPointTotal(point: AccountBalanceChartPoint): number {
+	return Object.entries(point).reduce((sum, [key, value]) => {
+		if (key === 'date' || key === 'sortDate') return sum;
+		return sum + (typeof value === 'number' ? value : 0);
+	}, 0);
+}
+
 /** Sums each category's accounts for a single chart point. */
 export function categoryTotalsFromChartPoint(
 	accounts: BankAccountItem[],

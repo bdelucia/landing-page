@@ -217,6 +217,8 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		byItemId[itemKey] = buildAccountBalanceHistory({
 			accounts: bankAccounts,
 			bankLabel: itemLabel,
+			itemId: item.itemId ?? null,
+			itemIsDebt: isDebt,
 			useDummyData
 		});
 	}
