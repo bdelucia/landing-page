@@ -7,26 +7,12 @@ export type InvestmentContributionTimeline = {
 	steps: Array<{ sortDate: string; contributions: number }>;
 };
 
-/** Resolve which timeline date to use for contribution lookup on the chart. */
-export function resolveContributionSortDate(
+/** Synthetic chart days inserted before the first Plaid snapshot. */
+export function isPreSnapshotSyntheticDay(
 	sortDate: string,
-	timeline: InvestmentContributionTimeline,
-	firstFilteredSortDate: string | null = null
-): string {
-	if (timeline.trackingStartDate && sortDate <= timeline.trackingStartDate) {
-		return timeline.trackingStartDate;
-	}
-
-	if (
-		firstFilteredSortDate &&
-		sortDate === firstFilteredSortDate &&
-		timeline.trackingStartDate &&
-		firstFilteredSortDate <= timeline.trackingStartDate
-	) {
-		return timeline.trackingStartDate;
-	}
-
-	return sortDate;
+	firstRealPlaidSortDate: string | null
+): boolean {
+	return firstRealPlaidSortDate != null && sortDate < firstRealPlaidSortDate;
 }
 
 export function contributionsAsOf(
@@ -55,19 +41,25 @@ export function investmentStatsFromTimeline(
 	balance: number,
 	sortDate: string,
 	timeline: InvestmentContributionTimeline,
-	firstFilteredSortDate: string | null = null
+	firstRealPlaidSortDate: string | null = null
 ): { contributions: number; earnings: number } {
-	const resolvedSortDate = resolveContributionSortDate(
-		sortDate,
-		timeline,
-		firstFilteredSortDate
-	);
-	const contributions = contributionsAsOf(resolvedSortDate, timeline);
+	if (isPreSnapshotSyntheticDay(sortDate, firstRealPlaidSortDate)) {
+		return {
+			contributions: timeline.baseline,
+			earnings: 0
+		};
+	}
+
+	const contributions = contributionsAsOf(sortDate, timeline);
 	const earnings = Math.round((balance - contributions) * 100) / 100;
 
 	return { contributions, earnings };
 }
 
 export function initialContributionAmount(timeline: InvestmentContributionTimeline): number {
+	return timeline.baseline;
+}
+
+export function preSnapshotSyntheticBalance(timeline: InvestmentContributionTimeline): number {
 	return timeline.baseline;
 }

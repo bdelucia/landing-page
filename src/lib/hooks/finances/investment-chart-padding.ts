@@ -9,6 +9,13 @@ import {
 } from '$lib/hooks/finances/bank-accounts';
 import type { InvestmentContributionTimeline } from '$lib/hooks/finances/investment-contribution-timeline';
 
+/** First calendar day with a real Plaid balance snapshot in the chart history. */
+export function firstRealPlaidSortDate(
+	fullChartData: AccountBalanceChartPoint[]
+): string | null {
+	return fullChartData[0]?.sortDate ?? null;
+}
+
 function buildSyntheticInvestmentPoint(
 	sortDate: string,
 	baseline: number,
@@ -19,17 +26,37 @@ function buildSyntheticInvestmentPoint(
 		sortDate
 	};
 
-	for (const accountId of accountIds) {
-		point[accountSeriesKey(accountId)] = baseline;
+	if (accountIds.length === 0) {
+		return point;
+	}
+
+	// Item-level baseline is split so series values sum to baseline (not baseline × accounts).
+	const [primaryAccountId, ...otherAccountIds] = accountIds;
+	point[accountSeriesKey(primaryAccountId)] = baseline;
+
+	for (const accountId of otherAccountIds) {
+		point[accountSeriesKey(accountId)] = 0;
 	}
 
 	return point;
 }
 
+function prependSyntheticDays(
+	data: AccountBalanceChartPoint[],
+	syntheticPoints: AccountBalanceChartPoint[]
+): AccountBalanceChartPoint[] {
+	if (syntheticPoints.length === 0) {
+		return data;
+	}
+
+	return [...syntheticPoints, ...data].sort((left, right) =>
+		left.sortDate.localeCompare(right.sortDate)
+	);
+}
+
 /**
- * Back-fills investing charts with synthetic days inside the selected range but before
- * the first Plaid snapshot. Balance and contributions both use the baseline amount
- * (earnings = 0 on those days).
+ * Back-fills investing charts with synthetic days before the first Plaid snapshot.
+ * Balance total equals baseline with $0 earnings (contributions only).
  */
 export function padInvestmentChartDataForRange(
 	rangeFilteredData: AccountBalanceChartPoint[],
@@ -38,8 +65,22 @@ export function padInvestmentChartDataForRange(
 	timeline: InvestmentContributionTimeline,
 	accountIds: string[]
 ): AccountBalanceChartPoint[] {
-	if (range === 'ALL') {
+	const earliestRealSortDate = firstRealPlaidSortDate(fullChartData);
+	if (!earliestRealSortDate) {
 		return rangeFilteredData;
+	}
+
+	const existingDates = new Set(fullChartData.map((point) => point.sortDate));
+
+	if (range === 'ALL') {
+		const syntheticDate = addDaysToDayKey(earliestRealSortDate, -1);
+		if (existingDates.has(syntheticDate)) {
+			return rangeFilteredData;
+		}
+
+		return prependSyntheticDays(rangeFilteredData, [
+			buildSyntheticInvestmentPoint(syntheticDate, timeline.baseline, accountIds)
+		]);
 	}
 
 	const referenceSource =
@@ -59,26 +100,18 @@ export function padInvestmentChartDataForRange(
 		return rangeFilteredData;
 	}
 
-	const firstRealSortDate =
-		rangeFilteredData.length > 0
-			? rangeFilteredData[0].sortDate
-			: fullChartData.length > 0
-				? fullChartData[0].sortDate
-				: null;
+	const firstRealInRange =
+		rangeFilteredData.find((point) => point.sortDate >= earliestRealSortDate)?.sortDate ??
+		earliestRealSortDate;
 
-	if (!firstRealSortDate || firstRealSortDate <= cutoff) {
+	if (firstRealInRange <= cutoff) {
 		return rangeFilteredData;
 	}
 
-	const padThroughDate = addDaysToDayKey(firstRealSortDate, -1);
+	const padThroughDate = addDaysToDayKey(firstRealInRange, -1);
 	if (padThroughDate < cutoff) {
 		return rangeFilteredData;
 	}
-
-	const existingDates = new Set([
-		...fullChartData.map((point) => point.sortDate),
-		...rangeFilteredData.map((point) => point.sortDate)
-	]);
 
 	const syntheticPoints = iterDayKeysInRange(cutoff, padThroughDate)
 		.filter((sortDate) => !existingDates.has(sortDate))
@@ -86,11 +119,5 @@ export function padInvestmentChartDataForRange(
 			buildSyntheticInvestmentPoint(sortDate, timeline.baseline, accountIds)
 		);
 
-	if (syntheticPoints.length === 0) {
-		return rangeFilteredData;
-	}
-
-	return [...syntheticPoints, ...rangeFilteredData].sort((left, right) =>
-		left.sortDate.localeCompare(right.sortDate)
-	);
+	return prependSyntheticDays(rangeFilteredData, syntheticPoints);
 }

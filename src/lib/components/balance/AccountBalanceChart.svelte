@@ -5,8 +5,15 @@
 		type ChartConfig
 	} from '$lib/components/ui/chart/chart-utils';
 	import type { CategoryBalanceSummary } from '$lib/hooks/finances/account-balances';
-	import { investmentStatsFromTimeline } from '$lib/hooks/finances/investment-contribution-timeline';
-	import { padInvestmentChartDataForRange } from '$lib/hooks/finances/investment-chart-padding';
+	import {
+		investmentStatsFromTimeline,
+		isPreSnapshotSyntheticDay,
+		preSnapshotSyntheticBalance
+	} from '$lib/hooks/finances/investment-contribution-timeline';
+	import {
+		firstRealPlaidSortDate,
+		padInvestmentChartDataForRange
+	} from '$lib/hooks/finances/investment-chart-padding';
 	import {
 		accountSeriesKey,
 		categoryTotalsFromChartPoint,
@@ -88,9 +95,17 @@
 		}
 	} satisfies ChartConfig);
 
+	const investmentAccountIds = $derived(
+		headerAccounts.length > 0
+			? headerAccounts.map((account) => account.id)
+			: detail.accounts.map((account) => account.id)
+	);
+
 	const rangeFilteredChartData = $derived(
 		filterChartDataByRange(detail.chartData, activeTimeRange)
 	);
+
+	const firstRealPlaidDay = $derived(firstRealPlaidSortDate(detail.chartData));
 
 	const filteredChartData = $derived.by(() => {
 		const timeline = detail.investmentContributionTimeline;
@@ -103,7 +118,7 @@
 			detail.chartData,
 			activeTimeRange,
 			timeline,
-			detail.accounts.map((account) => account.id)
+			investmentAccountIds
 		);
 	});
 
@@ -178,6 +193,12 @@
 	});
 
 	const displayedTotalValue = $derived.by(() => {
+		const timeline = detail.investmentContributionTimeline;
+
+		if (hoveredChartPoint?.sortDate && timeline && isPreSnapshotSyntheticDay(hoveredChartPoint.sortDate, firstRealPlaidDay)) {
+			return preSnapshotSyntheticBalance(timeline);
+		}
+
 		if (hoveredChartPoint) {
 			if (activeChart === 'total') {
 				return chartPointTotal(hoveredChartPoint);
@@ -190,8 +211,6 @@
 
 		return totalBalance;
 	});
-
-	const firstFilteredSortDate = $derived(filteredChartData[0]?.sortDate ?? null);
 
 	const activeChartSortDate = $derived.by(() => {
 		if (hoveredChartPoint?.sortDate) {
@@ -213,7 +232,7 @@
 			displayedTotalValue,
 			sortDate,
 			timeline,
-			firstFilteredSortDate
+			firstRealPlaidDay
 		);
 	});
 
