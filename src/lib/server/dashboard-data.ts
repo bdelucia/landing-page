@@ -1,6 +1,7 @@
 import type { DashboardFinances, DashboardWeather } from '$lib/dashboard-data';
-import { fetchAccountBalances } from '$lib/server/plaid-balances';
-import { fetchBankAccountDetails } from '$lib/server/plaid-bank-accounts';
+import { personalSecrets } from '$lib/server/personal-secrets';
+import { isPlaidLinked } from '$lib/server/integration-config';
+import { loadLatestBalancesFromDb } from '$lib/server/latest-balance-snapshots';
 import { fetchCurrentWeather } from '$lib/server/open-weather';
 import { fetchRecentTransactions } from '$lib/server/plaid-transactions';
 
@@ -16,15 +17,30 @@ export function loadDashboardWeather(): Promise<DashboardWeather> {
 }
 
 export function loadDashboardFinances(): Promise<DashboardFinances> {
-	return Promise.all([fetchRecentTransactions(5), fetchAccountBalances(), fetchBankAccountDetails()])
-		.then(([transactionsResult, accountsResult, bankAccountsResult]) => ({
-			transactions: transactionsResult.transactions,
-			transactionsError: transactionsResult.error,
-			accounts: accountsResult.accounts,
-			accountBalancesError: accountsResult.error,
-			bankAccountDetails: bankAccountsResult.byItemId,
-			bankAccountDetailsError: bankAccountsResult.error
-		}))
+	return fetchRecentTransactions(5)
+		.then((transactionsResult) => {
+			if (!isPlaidLinked(personalSecrets)) {
+				return {
+					transactions: transactionsResult.transactions,
+					transactionsError: transactionsResult.error,
+					accounts: [],
+					accountBalancesError: 'Plaid access token is not set in personal-info.local.ts',
+					bankAccountDetails: {},
+					bankAccountDetailsError: 'Plaid access token is not set in personal-info.local.ts'
+				};
+			}
+
+			const balances = loadLatestBalancesFromDb(personalSecrets.plaid);
+
+			return {
+				transactions: transactionsResult.transactions,
+				transactionsError: transactionsResult.error,
+				accounts: balances.accounts,
+				accountBalancesError: balances.error,
+				bankAccountDetails: balances.byItemId,
+				bankAccountDetailsError: balances.error
+			};
+		})
 		.catch((error: unknown) => {
 			const message = error instanceof Error ? error.message : 'Failed to load account data';
 			return {

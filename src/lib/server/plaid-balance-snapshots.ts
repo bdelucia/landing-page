@@ -65,6 +65,80 @@ async function fetchRowsForItem(
 	return response.data.accounts.map((account) => toSnapshotRow(account, item, snapshotTime));
 }
 
+function findLinkedItemByPlaidItemId(
+	plaid: PlaidConfig,
+	plaidItemId: string
+): PlaidLinkedItem | null {
+	const linkedItems = getPlaidLinkedItems(plaid);
+
+	for (const item of linkedItems) {
+		if (item.itemId === plaidItemId) {
+			return item;
+		}
+	}
+
+	return null;
+}
+
+export type RecordPlaidBalanceSnapshotForItemResult = {
+	snapshotTime: string;
+	inserted: number;
+	itemLabel: string | null;
+	skipped: boolean;
+	message: string | null;
+};
+
+export async function recordPlaidBalanceSnapshotForItem(
+	plaidItemId: string,
+	now: Date = new Date()
+): Promise<RecordPlaidBalanceSnapshotForItemResult> {
+	const snapshotTime = now.toISOString();
+
+	if (!isPlaidLinked(personalSecrets)) {
+		return {
+			snapshotTime,
+			inserted: 0,
+			itemLabel: null,
+			skipped: true,
+			message: 'Plaid is not fully configured or linked in personal-info.local.ts'
+		};
+	}
+
+	const { plaid } = personalSecrets;
+	const item = findLinkedItemByPlaidItemId(plaid, plaidItemId);
+
+	if (!item) {
+		return {
+			snapshotTime,
+			inserted: 0,
+			itemLabel: null,
+			skipped: true,
+			message: `No linked Plaid item matches item_id "${plaidItemId}"`
+		};
+	}
+
+	try {
+		const rows = await fetchRowsForItem(plaid, item, snapshotTime);
+		const inserted = insertSnapshotRows(rows);
+
+		return {
+			snapshotTime,
+			inserted,
+			itemLabel: resolveItemLabel(item),
+			skipped: false,
+			message: inserted > 0 ? null : 'Plaid returned no accounts for this item'
+		};
+	} catch (error) {
+		return {
+			snapshotTime,
+			inserted: 0,
+			itemLabel: resolveItemLabel(item),
+			skipped: false,
+			message: formatPlaidApiError(error)
+		};
+	}
+}
+
 function insertSnapshotRows(rows: SnapshotRow[]): number {
 	if (rows.length === 0) return 0;
 

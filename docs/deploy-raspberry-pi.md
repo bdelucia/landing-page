@@ -1,6 +1,6 @@
-# Deploy on Raspberry Pi (Docker + daily Plaid balance logging)
+# Deploy on Raspberry Pi (Docker + Plaid webhooks + SQLite balances)
 
-This guide deploys your landing page in Docker, stores Plaid account balances in SQLite, and runs a midnight cron job on the Pi to append daily snapshots.
+This guide deploys your landing page in Docker, stores Plaid account balances in SQLite, and keeps them fresh with Plaid webhooks (plus an optional nightly cron fallback).
 
 ## 1) Configure your local secrets
 
@@ -10,7 +10,7 @@ Create your local config file if you do not already have it:
 cp src/data/personal-info.example.ts src/data/personal-info.local.ts
 ```
 
-Inside `src/data/personal-info.local.ts`, set Plaid credentials and linked items. Use one `items[]` entry per institution (`AZFCU`, `Robinhood`, `Fidelity`):
+Inside `src/data/personal-info.local.ts`, set Plaid credentials and linked items. Use one `items[]` entry per institution (`AZFCU`, `Robinhood`, `Fidelity`, `Capital One`, `PayPal`):
 
 ```ts
 plaid: {
@@ -20,12 +20,14 @@ plaid: {
 	items: [
 		{ accessToken: '...', itemId: '...', label: 'AZFCU' },
 		{ accessToken: '...', itemId: '...', label: 'Robinhood' },
-		{ accessToken: '...', itemId: '...', label: 'Fidelity' }
+		{ accessToken: '...', itemId: '...', label: 'Fidelity' },
+		{ accessToken: '...', itemId: '...', label: 'Capital One' },
+		{ accessToken: '...', itemId: '...', label: 'PayPal' }
 	]
 }
 ```
 
-The nightly logger stores each account returned by Plaid under those items (for example, checking + savings, investing + Roth IRA, Roth 401k).
+Each linked item stores every account Plaid returns under it (checking, savings, brokerage, Roth IRA, credit cards, and so on). The dashboard reads the latest snapshot from SQLite on page load instead of calling Plaid live.
 
 ## 2) Create Docker environment file
 
@@ -58,22 +60,36 @@ SQLite file will persist on the Pi at:
 
 `./data/finance.sqlite` (project-relative, bind-mounted into container as `/app/data/finance.sqlite`)
 
-## 4) Test the logging endpoint manually
+## 4) Plaid webhooks
 
-From the Pi host:
+Each linked Item sends webhooks to:
+
+```text
+https://zbservermc.tail90b403.ts.net/api/webhooks/plaid
+```
+
+Plaid sends balance-related updates for:
+
+- **Cash & checking** — `TRANSACTIONS` webhooks (`SYNC_UPDATES_AVAILABLE`, `DEFAULT_UPDATE`, and related codes)
+- **Investing** — `INVESTMENTS_TRANSACTIONS` and `HOLDINGS` webhooks
+- **Credit / liabilities** — `LIABILITIES` webhooks
+
+When a webhook arrives, the app verifies Plaid's JWT signature, fetches fresh balances for that Item, and appends rows to SQLite.
+
+If you link a new bank later, register the same webhook URL on that Item with Plaid's [`/item/webhook/update`](https://plaid.com/docs/api/items/#itemwebhookupdate) endpoint.
+
+### Seed the database once
+
+Before webhooks arrive, seed an initial snapshot:
 
 ```sh
 chmod +x scripts/run-balance-log.sh
 ./scripts/run-balance-log.sh
 ```
 
-Expected JSON contains:
+You can rerun this any time; it remains useful as a nightly fallback.
 
-- `snapshotTime` (UTC timestamp)
-- `inserted` (rows inserted; one row per Plaid account)
-- `failures` (per-item failures if any)
-
-## 5) Add midnight cron job on the Raspberry Pi host
+## 5) Optional midnight cron fallback
 
 Create a log directory once:
 
@@ -114,6 +130,16 @@ If `sqlite3` is not installed:
 sudo apt-get update && sudo apt-get install -y sqlite3
 ```
 
+## Local webhook testing
+
+For local development only, you can skip Plaid JWT verification:
+
+```sh
+PLAID_WEBHOOK_SKIP_VERIFICATION=1 pnpm dev
+```
+
+Never set this in production.
+
 ## Schema created automatically
 
 Table: `account_balance_snapshots`
@@ -122,3 +148,5 @@ Table: `account_balance_snapshots`
 - Institution fields: `plaid_item_label`, `plaid_item_id`
 - Account fields: `plaid_account_id`, `account_name`, `account_mask`, `account_type`, `account_subtype`
 - Balance fields: `balance_current`, `balance_available`, `balance_limit`, `iso_currency_code`, `unofficial_currency_code`
+
+The dashboard always reads the most recent row per `plaid_account_id`.
