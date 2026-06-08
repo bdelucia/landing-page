@@ -9,7 +9,8 @@ import { getPlaidLinkedItems } from '$lib/server/config/integration-config';
 import {
 	ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
-	getDatabase
+	getDatabase,
+	getResolvedDatabasePath
 } from '$lib/server/db/database';
 import type { PlaidConfig } from '$data/api-config.types';
 
@@ -72,7 +73,8 @@ export function buildBalanceChartDebugReport(plaid: PlaidConfig) {
 	return {
 		environment: plaid.environment,
 		tableName,
-		sqliteDbPath: process.env.SQLITE_DB_PATH?.trim() || 'database/finance.sqlite',
+		configuredSqliteDbPath: process.env.SQLITE_DB_PATH?.trim() || 'database/finance.sqlite',
+		sqliteDbPath: getResolvedDatabasePath(),
 		totalSnapshotRows: countSnapshotRows(tableName),
 		global,
 		items
