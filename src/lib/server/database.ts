@@ -37,7 +37,11 @@ const ACCOUNT_BALANCE_SNAPSHOTS_DDL = `
 export const ACCOUNT_BALANCE_SNAPSHOTS_TABLE = 'account_balance_snapshots';
 export const ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE = 'account_balance_snapshots_dummy';
 
-function ensureBalanceSnapshotTable(db: DatabaseSync, tableName: string, indexPrefix: string): void {
+function ensureBalanceSnapshotTable(
+	db: DatabaseSync,
+	tableName: string,
+	indexPrefix: string
+): void {
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS ${tableName} (
 			${ACCOUNT_BALANCE_SNAPSHOTS_DDL}

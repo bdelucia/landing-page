@@ -2,7 +2,10 @@ import type { AccountBase } from 'plaid';
 import type { AccountBalanceKey } from '$lib/account-balances';
 
 function titleCase(value: string): string {
-	return value.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+	return value
+		.toLowerCase()
+		.replace(/_/g, ' ')
+		.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 type ChartLabelOverride = {

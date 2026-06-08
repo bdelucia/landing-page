@@ -84,13 +84,17 @@ function accountsForChartHeader(
 ): BankAccountItem[] {
 	const latestMaskByAccount = latestMaskByAccountId(snapshotRows);
 	return accounts.filter(
-		(account) =>
-			account.forceChartHeader || hasChartHeaderMask(account, latestMaskByAccount)
+		(account) => account.forceChartHeader || hasChartHeaderMask(account, latestMaskByAccount)
 	);
 }
 
-function pivotSnapshots(rows: SnapshotRow[], accounts: BankAccountItem[]): AccountBalanceChartPoint[] {
-	const accountKeys = new Map(accounts.map((account) => [account.id, accountSeriesKey(account.id)]));
+function pivotSnapshots(
+	rows: SnapshotRow[],
+	accounts: BankAccountItem[]
+): AccountBalanceChartPoint[] {
+	const accountKeys = new Map(
+		accounts.map((account) => [account.id, accountSeriesKey(account.id)])
+	);
 	const byDay = new Map<string, AccountBalanceChartPoint>();
 
 	for (const row of rows) {

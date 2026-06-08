@@ -22,7 +22,8 @@ export function createPlaidClient(config: PlaidConfig): PlaidApi {
 }
 
 export function formatPlaidApiError(error: unknown): string {
-	const data = (error as { response?: { data?: { error_message?: string; display_message?: string } } })
-		.response?.data;
+	const data = (
+		error as { response?: { data?: { error_message?: string; display_message?: string } } }
+	).response?.data;
 	return data?.display_message ?? data?.error_message ?? 'Plaid API error';
 }

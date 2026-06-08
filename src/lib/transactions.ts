@@ -1,10 +1,4 @@
-export type TransactionIcon =
-	| 'coffee'
-	| 'cart'
-	| 'wallet'
-	| 'car'
-	| 'tv'
-	| 'default';
+export type TransactionIcon = 'coffee' | 'cart' | 'wallet' | 'car' | 'tv' | 'default';
 
 export type TransactionItem = {
 	id: string;

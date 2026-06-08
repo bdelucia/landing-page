@@ -129,10 +129,7 @@ export function categoryBalanceSummaries(accounts: AccountBalanceItem[]): Catego
 
 export type AccountBalanceKey = (typeof accountBalanceDisplayOrder)[number];
 
-export const debtAccountLabels: ReadonlySet<AccountBalanceKey> = new Set([
-	'Capital One',
-	'PayPal'
-]);
+export const debtAccountLabels: ReadonlySet<AccountBalanceKey> = new Set(['Capital One', 'PayPal']);
 
 export function isDebtAccountLabel(label: string): boolean {
 	return debtAccountLabels.has(label.trim() as AccountBalanceKey);

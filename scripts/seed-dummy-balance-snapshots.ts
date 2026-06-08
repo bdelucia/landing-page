@@ -23,7 +23,12 @@ function getPlaidLinkedItems(plaid: PlaidConfig): PlaidLinkedItem[] {
 
 function isPlaidLinked(): boolean {
 	const plaid = personalSecrets.plaid;
-	return !!plaid && hasValue(plaid.clientId) && hasValue(plaid.secret) && getPlaidLinkedItems(plaid).length > 0;
+	return (
+		!!plaid &&
+		hasValue(plaid.clientId) &&
+		hasValue(plaid.secret) &&
+		getPlaidLinkedItems(plaid).length > 0
+	);
 }
 
 function resolveItemLabel(item: PlaidLinkedItem): string {

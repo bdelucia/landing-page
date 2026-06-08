@@ -17,7 +17,10 @@ function toDateString(daysAgo: number): string {
 }
 
 function toTitleCase(value: string): string {
-	return value.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+	return value
+		.toLowerCase()
+		.replace(/_/g, ' ')
+		.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatCategoryLabel(transaction: Transaction): string {
@@ -97,9 +100,7 @@ function investmentTransactionSortKey(transaction: InvestmentTransaction): strin
 
 function formatAmountLabel(amount: number): { amountLabel: string; isIncome: boolean } {
 	const isIncome = amount < 0;
-	const amountLabel = isIncome
-		? `+${money.format(Math.abs(amount))}`
-		: `-${money.format(amount)}`;
+	const amountLabel = isIncome ? `+${money.format(Math.abs(amount))}` : `-${money.format(amount)}`;
 
 	return { amountLabel, isIncome };
 }
@@ -174,9 +175,7 @@ function sortByRecency(transactions: Transaction[]): Transaction[] {
 	);
 }
 
-function sortInvestmentsByRecency(
-	transactions: InvestmentTransaction[]
-): InvestmentTransaction[] {
+function sortInvestmentsByRecency(transactions: InvestmentTransaction[]): InvestmentTransaction[] {
 	return [...transactions].sort((a, b) =>
 		investmentTransactionSortKey(b).localeCompare(investmentTransactionSortKey(a))
 	);

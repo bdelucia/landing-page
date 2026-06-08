@@ -7,10 +7,7 @@ import {
 	type AccountBalanceItem
 } from '$lib/account-balances';
 import { accountBalanceIcon } from '$lib/account-balance-icons';
-import {
-	type BankAccountDetailsByItem,
-	type BankAccountItem
-} from '$lib/bank-accounts';
+import { type BankAccountDetailsByItem, type BankAccountItem } from '$lib/bank-accounts';
 import { buildAccountBalanceHistory } from '$lib/server/account-balance-history';
 import {
 	ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
@@ -79,16 +76,16 @@ export function fetchLatestSnapshotRows(
 	const db = getDatabase();
 	const statement = db.prepare(`
 		SELECT
-			snapshot_time AS snapshotTime,
-			plaid_item_label AS itemLabel,
-			plaid_item_id AS itemId,
-			plaid_account_id AS accountId,
-			account_name AS accountName,
-			account_mask AS accountMask,
-			account_type AS accountType,
-			account_subtype AS accountSubtype,
-			balance_current AS balanceCurrent,
-			balance_available AS balanceAvailable
+			snapshot.snapshot_time AS snapshotTime,
+			snapshot.plaid_item_label AS itemLabel,
+			snapshot.plaid_item_id AS itemId,
+			snapshot.plaid_account_id AS accountId,
+			snapshot.account_name AS accountName,
+			snapshot.account_mask AS accountMask,
+			snapshot.account_type AS accountType,
+			snapshot.account_subtype AS accountSubtype,
+			snapshot.balance_current AS balanceCurrent,
+			snapshot.balance_available AS balanceAvailable
 		FROM ${tableName} AS snapshot
 		INNER JOIN (
 			SELECT plaid_account_id, MAX(snapshot_time) AS max_snapshot_time
@@ -98,7 +95,7 @@ export function fetchLatestSnapshotRows(
 			ON snapshot.plaid_account_id = latest.plaid_account_id
 			AND snapshot.snapshot_time = latest.max_snapshot_time
 		WHERE snapshot.id = (
-			SELECT id
+			SELECT candidate.id
 			FROM ${tableName} AS candidate
 			WHERE candidate.plaid_account_id = snapshot.plaid_account_id
 				AND candidate.snapshot_time = snapshot.snapshot_time
@@ -115,10 +112,7 @@ function rowsForItem(rows: LatestSnapshotRow[], item: PlaidLinkedItem): LatestSn
 	const itemLabel = resolveItemLabel(item);
 
 	return rows.filter(
-		(row) =>
-			row.itemId === itemKey ||
-			row.itemId === item.itemId ||
-			row.itemLabel === itemLabel
+		(row) => row.itemId === itemKey || row.itemId === item.itemId || row.itemLabel === itemLabel
 	);
 }
 

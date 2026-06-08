@@ -14,8 +14,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!configuredToken) {
 		return json(
 			{
-				error:
-					'BALANCE_LOG_CRON_TOKEN is not set. Refusing to run balance logger without auth.'
+				error: 'BALANCE_LOG_CRON_TOKEN is not set. Refusing to run balance logger without auth.'
 			},
 			{ status: 503 }
 		);

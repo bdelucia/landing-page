@@ -1,14 +1,8 @@
 import type { OpenWeatherConfig } from '$data/personal-info.types';
 import { withCache } from '$lib/server/cache';
 import { personalSecrets } from '$lib/server/personal-secrets';
-import {
-	isOpenWeatherConfigured,
-	openWeatherLocationQuery
-} from '$lib/server/integration-config';
-import {
-	weatherIconFromCondition,
-	type WeatherDisplay
-} from '$lib/weather';
+import { isOpenWeatherConfigured, openWeatherLocationQuery } from '$lib/server/integration-config';
+import { weatherIconFromCondition, type WeatherDisplay } from '$lib/weather';
 
 type OpenWeatherGeocodeResponse = {
 	name: string;

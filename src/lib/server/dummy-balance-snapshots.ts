@@ -1,8 +1,5 @@
 import type { BankAccountItem } from '$lib/bank-accounts';
-import {
-	ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
-	getDatabase
-} from '$lib/server/database';
+import { ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE, getDatabase } from '$lib/server/database';
 
 export const DUMMY_SNAPSHOT_HISTORY_DAYS = 365 * 2;
 
@@ -251,7 +248,8 @@ function generateRelativeTickerPrices(
 
 		if (rngChance(dayRng, profile.gapChance)) {
 			const direction = rngChance(dayRng, profile.positiveSpikeBias) ? 1 : -1;
-			dailyReturn += direction * rngBetween(dayRng, profile.gapMagnitude * 0.4, profile.gapMagnitude);
+			dailyReturn +=
+				direction * rngBetween(dayRng, profile.gapMagnitude * 0.4, profile.gapMagnitude);
 		}
 
 		const nextPrice = prices[dayIndex - 1] * (1 + dailyReturn);
@@ -390,11 +388,7 @@ function finalizeTickerBalances(
 	if (lowest < minBalance) {
 		const lift = minBalance - lowest;
 		result = result.map((balance) => balance + lift);
-		result = applyNoisyDrift(
-			result,
-			targetEnd - result[result.length - 1],
-			accountId
-		);
+		result = applyNoisyDrift(result, targetEnd - result[result.length - 1], accountId);
 	}
 
 	result = addBrownianBridgeNoise(result, accountId, profile.bridgeVolatility, targetEnd);
@@ -406,11 +400,7 @@ function finalizeTickerBalances(
 		result = result.map((balance, dayIndex) =>
 			dayIndex === result.length - 1 ? balance : balance + lift
 		);
-		result = applyNoisyDrift(
-			result,
-			targetEnd - result[result.length - 1],
-			accountId
-		);
+		result = applyNoisyDrift(result, targetEnd - result[result.length - 1], accountId);
 	}
 
 	result[result.length - 1] = Math.round(targetEnd);
@@ -461,10 +451,7 @@ function generateCheckingTickerBalances(
 	);
 }
 
-function generateSavingsTickerBalances(
-	account: DummySnapshotAccount,
-	totalDays: number
-): number[] {
+function generateSavingsTickerBalances(account: DummySnapshotAccount, totalDays: number): number[] {
 	const ref = Math.max(Math.abs(account.balance), 2_500);
 
 	return generateTickerBalances(
@@ -650,11 +637,13 @@ function getMetadata(key: string): string | null {
 function setMetadata(key: string, value: string): void {
 	ensureMetadataTable();
 	const db = getDatabase();
-	db.prepare(`
+	db.prepare(
+		`
 		INSERT INTO app_metadata (key, value)
 		VALUES (?, ?)
 		ON CONFLICT(key) DO UPDATE SET value = excluded.value
-	`).run(key, value);
+	`
+	).run(key, value);
 }
 
 function clearAllDummySnapshots(): void {
