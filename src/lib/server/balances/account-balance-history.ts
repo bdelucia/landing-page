@@ -12,6 +12,7 @@ import {
 	iterDayKeysInRange,
 	parseSnapshotInstant
 } from '$lib/hooks/chart/chart-date';
+import { resolveScopedAccountIdsForItem } from '$lib/server/balances/snapshot-item-scope';
 import {
 	ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
@@ -187,46 +188,13 @@ function buildDailyChartPoints(
 	return points;
 }
 
-function resolveScopedAccountIds({
-	accountIds,
-	itemLabel,
-	itemId,
-	tableName
-}: FetchSnapshotInput): string[] {
-	const scopeClauses: string[] = [];
-	const params: Array<string> = [];
-
-	if (itemLabel) {
-		scopeClauses.push('plaid_item_label = ?');
-		params.push(itemLabel);
-	}
-
-	if (itemId) {
-		scopeClauses.push('plaid_item_id = ?');
-		params.push(itemId);
-	}
-
-	if (accountIds.length > 0) {
-		const placeholders = accountIds.map(() => '?').join(', ');
-		scopeClauses.push(`plaid_account_id IN (${placeholders})`);
-		params.push(...accountIds);
-	}
-
-	if (scopeClauses.length === 0) return [];
-
-	const db = getDatabase();
-	const statement = db.prepare(`
-		SELECT DISTINCT plaid_account_id AS accountId
-		FROM ${tableName}
-		WHERE (${scopeClauses.join(' OR ')})
-	`);
-
-	const rows = statement.all(...params) as Array<{ accountId: string }>;
-	return rows.map((row) => row.accountId);
-}
-
 function fetchSnapshotRows(input: FetchSnapshotInput): SnapshotRow[] {
-	const scopedAccountIds = resolveScopedAccountIds(input);
+	const scopedAccountIds = resolveScopedAccountIdsForItem({
+		itemLabel: input.itemLabel ?? '',
+		itemId: input.itemId,
+		tableName: input.tableName,
+		accountIds: input.accountIds
+	});
 	if (scopedAccountIds.length === 0) return [];
 
 	const placeholders = scopedAccountIds.map(() => '?').join(', ');
@@ -288,7 +256,7 @@ export function diagnoseBalanceChartForItem({
 		};
 	}
 
-	const scopedAccountIds = resolveScopedAccountIds({
+	const scopedAccountIds = resolveScopedAccountIdsForItem({
 		accountIds: accounts.map((account) => account.id),
 		itemLabel: bankLabel,
 		itemId,

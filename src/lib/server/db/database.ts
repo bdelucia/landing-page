@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -79,22 +79,104 @@ function migrateLegacyDatabaseIfNeeded(dbPath: string): void {
 	);
 }
 
-function warnIfLegacyDatabaseHasMoreHistory(dbPath: string): void {
+function countDistinctSnapshotDays(db: DatabaseSync, tableName: string): number {
+	try {
+		const row = db
+			.prepare(
+				`SELECT COUNT(DISTINCT substr(snapshot_time, 1, 10)) AS dayCount FROM ${tableName}`
+			)
+			.get() as { dayCount: number };
+
+		return row.dayCount ?? 0;
+	} catch {
+		return 0;
+	}
+}
+
+function mergeLegacySnapshotsIfNeeded(dbPath: string): void {
 	const legacyPath = legacyDatabasePath(dbPath);
 	if (!existsSync(dbPath) || !existsSync(legacyPath)) return;
 
+	const db = new DatabaseSync(dbPath);
 	try {
-		const currentSize = statSync(dbPath).size;
-		const legacySize = statSync(legacyPath).size;
+		const currentDays = countDistinctSnapshotDays(db, ACCOUNT_BALANCE_SNAPSHOTS_TABLE);
+		const escapedLegacyPath = legacyPath.replace(/'/g, "''");
+		db.exec(`ATTACH DATABASE '${escapedLegacyPath}' AS legacy_db`);
 
-		if (legacySize > currentSize * 1.5) {
+		const legacyDays = countDistinctSnapshotDays(db, 'legacy_db.account_balance_snapshots');
+		if (legacyDays <= currentDays) {
+			db.exec('DETACH DATABASE legacy_db');
+			return;
+		}
+
+		const beforeCount = db
+			.prepare(`SELECT COUNT(*) AS rowCount FROM ${ACCOUNT_BALANCE_SNAPSHOTS_TABLE}`)
+			.get() as { rowCount: number };
+
+		db.exec(`
+			INSERT INTO ${ACCOUNT_BALANCE_SNAPSHOTS_TABLE} (
+				snapshot_time,
+				plaid_item_label,
+				plaid_item_id,
+				plaid_account_id,
+				account_name,
+				account_mask,
+				account_type,
+				account_subtype,
+				balance_current,
+				balance_available,
+				balance_limit,
+				iso_currency_code,
+				unofficial_currency_code,
+				source
+			)
+			SELECT
+				legacy.snapshot_time,
+				legacy.plaid_item_label,
+				legacy.plaid_item_id,
+				legacy.plaid_account_id,
+				legacy.account_name,
+				legacy.account_mask,
+				legacy.account_type,
+				legacy.account_subtype,
+				legacy.balance_current,
+				legacy.balance_available,
+				legacy.balance_limit,
+				legacy.iso_currency_code,
+				legacy.unofficial_currency_code,
+				legacy.source
+			FROM legacy_db.account_balance_snapshots AS legacy
+			WHERE NOT EXISTS (
+				SELECT 1
+				FROM ${ACCOUNT_BALANCE_SNAPSHOTS_TABLE} AS current
+				WHERE current.snapshot_time = legacy.snapshot_time
+					AND current.plaid_account_id = legacy.plaid_account_id
+			)
+		`);
+
+		const afterCount = db
+			.prepare(`SELECT COUNT(*) AS rowCount FROM ${ACCOUNT_BALANCE_SNAPSHOTS_TABLE}`)
+			.get() as { rowCount: number };
+
+		db.exec('DETACH DATABASE legacy_db');
+
+		const inserted = afterCount.rowCount - beforeCount.rowCount;
+		if (inserted > 0) {
 			console.warn(
-				`Legacy SQLite database at ${legacyPath} is larger than ${dbPath}. ` +
-					'Balance history may still be in the old data/ folder — copy or merge it into database/ if the chart looks empty.'
+				`Merged ${inserted} balance snapshot row(s) from legacy database ${legacyPath} into ${dbPath}.`
 			);
 		}
-	} catch {
-		// Non-fatal: size check is best-effort guidance only.
+	} catch (error) {
+		try {
+			db.exec('DETACH DATABASE legacy_db');
+		} catch {
+			// Ignore detach failures during error recovery.
+		}
+
+		const message = error instanceof Error ? error.message : 'unknown error';
+		console.warn(`Failed to merge legacy balance snapshots from ${legacyPath}: ${message}`);
+	} finally {
+		db.close();
 	}
 }
 
@@ -114,7 +196,7 @@ export function getDatabase(): DatabaseSync {
 
 	const dbPath = resolveDatabasePath();
 	migrateLegacyDatabaseIfNeeded(dbPath);
-	warnIfLegacyDatabaseHasMoreHistory(dbPath);
+	mergeLegacySnapshotsIfNeeded(dbPath);
 	mkdirSync(dirname(dbPath), { recursive: true });
 	database = new DatabaseSync(dbPath);
 	ensureSchema(database);

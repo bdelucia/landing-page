@@ -32,7 +32,10 @@ export async function loadDashboardFinances(): Promise<DashboardFinances> {
 			};
 		}
 
-		await prepareBalanceSnapshots(apiSecrets.plaid);
+		if (apiSecrets.plaid.environment === 'sandbox') {
+			await prepareBalanceSnapshots(apiSecrets.plaid);
+		}
+
 		const balances = loadLatestBalancesFromDb(apiSecrets.plaid);
 
 		return {

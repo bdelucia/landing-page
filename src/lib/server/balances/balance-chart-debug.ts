@@ -1,7 +1,11 @@
 import { diagnoseBalanceChartForItem } from '$lib/server/balances/account-balance-history';
-import { fetchLatestSnapshotRows, snapshotRowsForItem } from '$lib/server/balances/latest-balance-snapshots';
+import { fetchLatestSnapshotRows } from '$lib/server/balances/latest-balance-snapshots';
+import {
+	buildSnapshotItemScope,
+	countSnapshotRows,
+	snapshotRowsForItem
+} from '$lib/server/balances/snapshot-item-scope';
 import { getPlaidLinkedItems } from '$lib/server/config/integration-config';
-import { getPersistedPlaidItemIdForLabel } from '$lib/server/plaid/plaid-item-registry';
 import {
 	ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
@@ -43,27 +47,33 @@ export function buildBalanceChartDebugReport(plaid: PlaidConfig) {
 	const latestSnapshotRows = fetchLatestSnapshotRows(tableName);
 	const items = getPlaidLinkedItems(plaid).map((item) => {
 		const itemLabel = resolveItemLabel(item);
-		const itemRows = snapshotRowsForItem(latestSnapshotRows, item);
+		const scope = buildSnapshotItemScope(item, tableName);
+		const itemRows = snapshotRowsForItem(latestSnapshotRows, scope);
 
-		return diagnoseBalanceChartForItem({
-			accounts: itemRows.map((row) => ({
-				id: row.accountId,
-				itemId: item.itemId ?? item.accessToken,
-				typeLabel: row.accountName,
-				mask: row.accountMask,
-				balanceLabel: '',
-				balance: row.balanceCurrent ?? row.balanceAvailable ?? 0
-			})),
-			bankLabel: itemLabel,
-			itemId: item.itemId ?? getPersistedPlaidItemIdForLabel(itemLabel),
-			useDummyData
-		});
+		return {
+			...diagnoseBalanceChartForItem({
+				accounts: itemRows.map((row) => ({
+					id: row.accountId,
+					itemId: item.itemId ?? item.accessToken,
+					typeLabel: row.accountName,
+					mask: row.accountMask,
+					balanceLabel: '',
+					balance: row.balanceCurrent ?? row.balanceAvailable ?? 0
+				})),
+				bankLabel: itemLabel,
+				itemId: scope.itemId,
+				useDummyData
+			}),
+			scopedAccountIds: [...scope.scopedAccountIds],
+			matchedLatestRows: itemRows.length
+		};
 	});
 
 	return {
 		environment: plaid.environment,
 		tableName,
 		sqliteDbPath: process.env.SQLITE_DB_PATH?.trim() || 'database/finance.sqlite',
+		totalSnapshotRows: countSnapshotRows(tableName),
 		global,
 		items
 	};

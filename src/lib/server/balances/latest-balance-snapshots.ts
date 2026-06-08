@@ -13,6 +13,12 @@ import {
 } from '$lib/hooks/finances/bank-accounts';
 import { buildAccountBalanceHistory } from '$lib/server/balances/account-balance-history';
 import {
+	buildSnapshotItemScope,
+	countSnapshotRows,
+	resolveSnapshotItemId,
+	snapshotRowsForItem
+} from '$lib/server/balances/snapshot-item-scope';
+import {
 	ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
 	getDatabase
@@ -22,10 +28,13 @@ import {
 	formatChartAccountTypeLabel,
 	hasChartLabelOverride
 } from '$lib/server/plaid/plaid-account-label';
-import { getPersistedPlaidItemIdForLabel } from '$lib/server/plaid/plaid-item-registry';
 import type { PlaidConfig, PlaidLinkedItem } from '$data/api-config.types';
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+type SnapshotTableName =
+	| typeof ACCOUNT_BALANCE_SNAPSHOTS_TABLE
+	| typeof ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE;
 
 export type LatestSnapshotRow = {
 	snapshotTime: string;
@@ -68,55 +77,66 @@ function toAccountBaseLike(row: LatestSnapshotRow): AccountBase {
 	} as AccountBase;
 }
 
+const LATEST_SNAPSHOT_ROW_SQL = `
+	SELECT
+		snapshot.snapshot_time AS snapshotTime,
+		snapshot.plaid_item_label AS itemLabel,
+		snapshot.plaid_item_id AS itemId,
+		snapshot.plaid_account_id AS accountId,
+		snapshot.account_name AS accountName,
+		snapshot.account_mask AS accountMask,
+		snapshot.account_type AS accountType,
+		snapshot.account_subtype AS accountSubtype,
+		snapshot.balance_current AS balanceCurrent,
+		snapshot.balance_available AS balanceAvailable
+	FROM {{tableName}} AS snapshot
+	INNER JOIN (
+		SELECT plaid_account_id, MAX(snapshot_time) AS max_snapshot_time
+		FROM {{tableName}}
+		{{accountFilter}}
+		GROUP BY plaid_account_id
+	) AS latest
+		ON snapshot.plaid_account_id = latest.plaid_account_id
+		AND snapshot.snapshot_time = latest.max_snapshot_time
+	WHERE snapshot.id = (
+		SELECT candidate.id
+		FROM {{tableName}} AS candidate
+		WHERE candidate.plaid_account_id = snapshot.plaid_account_id
+			AND candidate.snapshot_time = snapshot.snapshot_time
+		ORDER BY candidate.id DESC
+		LIMIT 1
+	)
+`;
+
+function latestSnapshotQuery(tableName: SnapshotTableName, accountIds: string[] = []): string {
+	const accountFilter =
+		accountIds.length > 0
+			? `WHERE plaid_account_id IN (${accountIds.map(() => '?').join(', ')})`
+			: '';
+
+	return LATEST_SNAPSHOT_ROW_SQL.replaceAll('{{tableName}}', tableName).replace(
+		'{{accountFilter}}',
+		accountFilter
+	);
+}
+
 export function fetchLatestSnapshotRows(
-	tableName:
-		| typeof ACCOUNT_BALANCE_SNAPSHOTS_TABLE
-		| typeof ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE = ACCOUNT_BALANCE_SNAPSHOTS_TABLE
+	tableName: SnapshotTableName = ACCOUNT_BALANCE_SNAPSHOTS_TABLE
 ): LatestSnapshotRow[] {
 	const db = getDatabase();
-	const statement = db.prepare(`
-		SELECT
-			snapshot.snapshot_time AS snapshotTime,
-			snapshot.plaid_item_label AS itemLabel,
-			snapshot.plaid_item_id AS itemId,
-			snapshot.plaid_account_id AS accountId,
-			snapshot.account_name AS accountName,
-			snapshot.account_mask AS accountMask,
-			snapshot.account_type AS accountType,
-			snapshot.account_subtype AS accountSubtype,
-			snapshot.balance_current AS balanceCurrent,
-			snapshot.balance_available AS balanceAvailable
-		FROM ${tableName} AS snapshot
-		INNER JOIN (
-			SELECT plaid_account_id, MAX(snapshot_time) AS max_snapshot_time
-			FROM ${tableName}
-			GROUP BY plaid_account_id
-		) AS latest
-			ON snapshot.plaid_account_id = latest.plaid_account_id
-			AND snapshot.snapshot_time = latest.max_snapshot_time
-		WHERE snapshot.id = (
-			SELECT candidate.id
-			FROM ${tableName} AS candidate
-			WHERE candidate.plaid_account_id = snapshot.plaid_account_id
-				AND candidate.snapshot_time = snapshot.snapshot_time
-			ORDER BY candidate.id DESC
-			LIMIT 1
-		)
-	`);
-
+	const statement = db.prepare(latestSnapshotQuery(tableName));
 	return statement.all() as LatestSnapshotRow[];
 }
 
-export function snapshotRowsForItem(
-	rows: LatestSnapshotRow[],
-	item: PlaidLinkedItem
+function fetchLatestSnapshotRowsForAccounts(
+	accountIds: string[],
+	tableName: SnapshotTableName
 ): LatestSnapshotRow[] {
-	const itemKey = resolveItemKey(item);
-	const itemLabel = resolveItemLabel(item);
+	if (accountIds.length === 0) return [];
 
-	return rows.filter(
-		(row) => row.itemId === itemKey || row.itemId === item.itemId || row.itemLabel === itemLabel
-	);
+	const db = getDatabase();
+	const statement = db.prepare(latestSnapshotQuery(tableName, accountIds));
+	return statement.all(...accountIds) as LatestSnapshotRow[];
 }
 
 function sortByDisplayOrder(accounts: AccountBalanceItem[]): AccountBalanceItem[] {
@@ -154,6 +174,21 @@ function mapSnapshotRowToBankAccount(
 	};
 }
 
+function latestRowsForItem(
+	item: PlaidLinkedItem,
+	allLatestRows: LatestSnapshotRow[],
+	tableName: SnapshotTableName
+): LatestSnapshotRow[] {
+	const scope = buildSnapshotItemScope(item, tableName);
+	const matchedRows = snapshotRowsForItem(allLatestRows, scope);
+
+	if (matchedRows.length > 0) {
+		return matchedRows;
+	}
+
+	return fetchLatestSnapshotRowsForAccounts([...scope.scopedAccountIds], tableName);
+}
+
 export type LatestBalancesFromDbResult = {
 	accounts: AccountBalanceItem[];
 	byItemId: BankAccountDetailsByItem;
@@ -168,6 +203,7 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		? ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE
 		: ACCOUNT_BALANCE_SNAPSHOTS_TABLE;
 	const snapshotRows = fetchLatestSnapshotRows(snapshotTable);
+	const totalSnapshotRows = countSnapshotRows(snapshotTable);
 	const byItemId: BankAccountDetailsByItem = {};
 	const accounts: AccountBalanceItem[] = [];
 	const missingItems: string[] = [];
@@ -177,7 +213,7 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		const itemLabel = resolveItemLabel(item);
 		const isDebt = isDebtAccountLabel(itemLabel);
 		const icon = accountBalanceIcon(itemLabel);
-		const itemRows = snapshotRowsForItem(snapshotRows, item);
+		const itemRows = latestRowsForItem(item, snapshotRows, snapshotTable);
 
 		if (itemRows.length === 0) {
 			missingItems.push(itemLabel);
@@ -218,7 +254,7 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		byItemId[itemKey] = buildAccountBalanceHistory({
 			accounts: bankAccounts,
 			bankLabel: itemLabel,
-			itemId: item.itemId ?? getPersistedPlaidItemIdForLabel(itemLabel),
+			itemId: resolveSnapshotItemId(item, itemLabel),
 			itemIsDebt: isDebt,
 			useDummyData
 		});
@@ -228,12 +264,17 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 	const hasData = missingItems.length < linkedItems.length;
 
 	if (!hasData) {
+		const sqlitePath = process.env.SQLITE_DB_PATH?.trim() || 'database/finance.sqlite';
+		const error = useDummyData
+			? 'No balance snapshots in the dummy SQLite table yet. Sandbox mode seeds from Plaid automatically when tokens are valid.'
+			: totalSnapshotRows > 0
+				? `Found ${totalSnapshotRows} balance snapshots in SQLite at ${sqlitePath}, but none match the linked Plaid items in secrets.local.ts. Check item labels and redeploy after the next webhook.`
+				: 'No balance snapshots in SQLite yet. Configure the Plaid webhook or run `pnpm update-balances` once.';
+
 		return {
 			accounts: sortedAccounts,
 			byItemId,
-			error: useDummyData
-				? 'No balance snapshots in the dummy SQLite table yet. Sandbox mode seeds from Plaid automatically when tokens are valid.'
-				: 'No balance snapshots in SQLite yet. Configure the Plaid webhook or run `pnpm update-balances` once.',
+			error,
 			hasData: false
 		};
 	}
