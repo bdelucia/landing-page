@@ -83,7 +83,7 @@ export type PlaidEnvironment = 'sandbox' | 'development' | 'production';
 
 /**
  * Starting contribution totals keyed by Plaid item `label` (e.g. `"Fidelity"`, `"Robinhood"`).
- * Used as the baseline before new deposits/withdrawals are applied from Plaid transactions.
+ * Should be the total you contributed before the earliest balance snapshot in SQLite.
  */
 export type InvestmentBaselines = Record<string, number>;
 
@@ -94,4 +94,9 @@ export type ApiSecrets = {
 	plaid?: PlaidConfig;
 	/** Total contributed before automated tracking began, keyed by investment item label */
 	investmentBaselines?: InvestmentBaselines;
+	/**
+	 * Optional fallback (YYYY-MM-DD) when no balance snapshots exist yet.
+	 * Normally the earliest snapshot date in SQLite is used instead.
+	 */
+	investmentTrackingStartDate?: string;
 };

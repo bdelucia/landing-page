@@ -15,6 +15,11 @@ import {
 	type InvestmentContributionTimeline
 } from '$lib/hooks/finances/investment-contribution-timeline';
 import {
+	readInvestmentBaselineAmount,
+	resolveInvestmentTrackingStartDate,
+	isOnOrAfterTrackingStart
+} from '$lib/server/investments/investment-baseline-config';
+import {
 	classifyInvestmentTransaction,
 	findDividendReinvestmentPairs
 } from '$lib/server/investments/investment-transaction-rules';
@@ -39,15 +44,32 @@ function readBaselines(): Record<string, number> {
 	return apiSecrets.investmentBaselines ?? {};
 }
 
-function isProcessedTransactionId(transactionId: string): boolean {
+function clearProcessedTransactions(itemLabel: string): void {
 	const db = getDatabase();
-	const row = db
-		.prepare(
-			`SELECT 1 AS found FROM ${INVESTMENT_PROCESSED_TRANSACTIONS_TABLE} WHERE investment_transaction_id = ?`
-		)
-		.get(transactionId) as { found: 1 } | undefined;
 
-	return row?.found === 1;
+	db.prepare(
+		`DELETE FROM ${INVESTMENT_PROCESSED_TRANSACTIONS_TABLE} WHERE plaid_item_label = ?`
+	).run(itemLabel.trim());
+}
+
+function storeContributionTotal(itemLabel: string, amount: number): void {
+	const db = getDatabase();
+	const now = new Date().toISOString();
+	const trimmedLabel = itemLabel.trim();
+
+	db.prepare(
+		`
+		INSERT INTO ${INVESTMENT_CONTRIBUTION_TOTALS_TABLE} (
+			plaid_item_label,
+			total_contributions,
+			updated_at
+		)
+		VALUES (?, ?, ?)
+		ON CONFLICT(plaid_item_label) DO UPDATE SET
+			total_contributions = excluded.total_contributions,
+			updated_at = excluded.updated_at
+	`
+	).run(trimmedLabel, roundMoney(amount), now);
 }
 
 function readContributionTotal(itemLabel: string): number | null {
@@ -62,43 +84,29 @@ function readContributionTotal(itemLabel: string): number | null {
 }
 
 function seedContributionTotal(itemLabel: string, amount: number): void {
-	const db = getDatabase();
-	const now = new Date().toISOString();
-
-	db.prepare(
-		`
-		INSERT INTO ${INVESTMENT_CONTRIBUTION_TOTALS_TABLE} (
-			plaid_item_label,
-			total_contributions,
-			updated_at
-		)
-		VALUES (?, ?, ?)
-		ON CONFLICT(plaid_item_label) DO NOTHING
-	`
-	).run(itemLabel, roundMoney(amount), now);
+	storeContributionTotal(itemLabel, amount);
 }
 
-function updateContributionTotal(itemLabel: string, delta: number): number {
+function sumContributionDeltas(itemLabel: string, trackingStartDate: string | null): number {
 	const db = getDatabase();
-	const now = new Date().toISOString();
-	const existing = readContributionTotal(itemLabel) ?? 0;
-	const next = roundMoney(existing + delta);
+	const trimmedLabel = itemLabel.trim();
 
-	db.prepare(
+	if (!trackingStartDate) {
+		return 0;
+	}
+
+	const row = db
+		.prepare(
+			`
+			SELECT COALESCE(SUM(contribution_delta), 0) AS totalDelta
+			FROM ${INVESTMENT_PROCESSED_TRANSACTIONS_TABLE}
+			WHERE plaid_item_label = ?
+				AND transaction_date >= ?
 		`
-		INSERT INTO ${INVESTMENT_CONTRIBUTION_TOTALS_TABLE} (
-			plaid_item_label,
-			total_contributions,
-			updated_at
 		)
-		VALUES (?, ?, ?)
-		ON CONFLICT(plaid_item_label) DO UPDATE SET
-			total_contributions = excluded.total_contributions,
-			updated_at = excluded.updated_at
-	`
-	).run(itemLabel, next, now);
+		.get(trimmedLabel, trackingStartDate) as { totalDelta: number };
 
-	return next;
+	return roundMoney(row.totalDelta ?? 0);
 }
 
 function markTransactionProcessed(
@@ -184,25 +192,37 @@ async function syncContributionsForItem(plaid: PlaidConfig, item: PlaidLinkedIte
 		return 0;
 	}
 
-	const transactions = await fetchInvestmentTransactions(plaid, item);
+	const baseline = readInvestmentBaselineAmount(itemLabel);
+	if (baseline == null) {
+		return 0;
+	}
+
+	const trackingStartDate = resolveInvestmentTrackingStartDate(itemLabel, false);
+	if (!trackingStartDate) {
+		storeContributionTotal(itemLabel, baseline);
+		return 0;
+	}
+
+	clearProcessedTransactions(itemLabel);
+
+	const transactions = (await fetchInvestmentTransactions(plaid, item)).filter((transaction) =>
+		isOnOrAfterTrackingStart(transaction.date, itemLabel, false)
+	);
 	const reinvestmentPairs = findDividendReinvestmentPairs(transactions);
 	let applied = 0;
 
 	for (const transaction of transactions) {
-		if (isProcessedTransactionId(transaction.investment_transaction_id)) {
-			continue;
-		}
-
 		const decision = classifyInvestmentTransaction(itemLabel, transaction, reinvestmentPairs);
 		const contributionDelta = decision.kind === 'contribution' ? decision.delta : 0;
 
 		if (decision.kind === 'contribution' && contributionDelta !== 0) {
-			updateContributionTotal(itemLabel, contributionDelta);
 			applied += 1;
 		}
 
 		markTransactionProcessed(itemLabel, transaction, contributionDelta);
 	}
+
+	storeContributionTotal(itemLabel, roundMoney(baseline + sumContributionDeltas(itemLabel, trackingStartDate)));
 
 	return applied;
 }
@@ -258,7 +278,7 @@ function recordInvestmentHistoryForRows(rows: LatestSnapshotRow[], snapshotTime:
 
 		const timeline =
 			timelinesByLabel.get(row.itemLabel) ??
-			loadInvestmentContributionTimeline(row.itemLabel) ??
+			loadInvestmentContributionTimeline(row.itemLabel, false) ??
 			null;
 
 		if (timeline) {
@@ -349,7 +369,8 @@ export function recordInvestmentHistoryFromSnapshotRows(
 }
 
 export function loadInvestmentContributionTimeline(
-	itemLabel: string
+	itemLabel: string,
+	useDummyData = false
 ): InvestmentContributionTimeline | null {
 	if (!isInvestingAccountLabel(itemLabel)) {
 		return null;
@@ -358,11 +379,17 @@ export function loadInvestmentContributionTimeline(
 	ensureBaselineTotals();
 
 	const trimmedLabel = itemLabel.trim();
-	const baseline = readBaselines()[trimmedLabel] ?? readContributionTotal(trimmedLabel) ?? 0;
+	const baseline = readInvestmentBaselineAmount(trimmedLabel);
+	if (baseline == null) {
+		return null;
+	}
+
+	const trackingStartDate = resolveInvestmentTrackingStartDate(trimmedLabel, useDummyData);
 	const db = getDatabase();
-	const rows = db
-		.prepare(
-			`
+	const rows = trackingStartDate
+		? (db
+				.prepare(
+					`
 			SELECT
 				transaction_date AS transactionDate,
 				contribution_delta AS contributionDelta
@@ -370,10 +397,15 @@ export function loadInvestmentContributionTimeline(
 			WHERE plaid_item_label = ?
 				AND contribution_delta != 0
 				AND transaction_date IS NOT NULL
+				AND transaction_date >= ?
 			ORDER BY transaction_date ASC, investment_transaction_id ASC
 		`
-		)
-		.all(trimmedLabel) as Array<{ transactionDate: string; contributionDelta: number }>;
+				)
+				.all(trimmedLabel, trackingStartDate) as Array<{
+				transactionDate: string;
+				contributionDelta: number;
+			}>)
+		: [];
 
 	const deltasByDate = new Map<string, number>();
 
@@ -396,8 +428,13 @@ export function loadInvestmentContributionTimeline(
 
 	return {
 		baseline: roundMoney(baseline),
+		trackingStartDate,
 		steps
 	};
+}
+
+function latestContributionsFromTimeline(timeline: InvestmentContributionTimeline): number {
+	return timeline.steps.at(-1)?.contributions ?? timeline.baseline;
 }
 
 export function loadInvestmentAccountStats(
@@ -408,16 +445,12 @@ export function loadInvestmentAccountStats(
 		return null;
 	}
 
-	ensureBaselineTotals();
-
-	const baselines = readBaselines();
-	const contributions =
-		readContributionTotal(itemLabel) ?? baselines[itemLabel.trim()] ?? null;
-
-	if (contributions == null) {
+	const timeline = loadInvestmentContributionTimeline(itemLabel);
+	if (!timeline) {
 		return null;
 	}
 
+	const contributions = latestContributionsFromTimeline(timeline);
 	const earnings = roundMoney(balance - contributions);
 
 	return {

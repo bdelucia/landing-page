@@ -29,5 +29,6 @@ export const apiSecrets: ApiSecrets = {
 	// investmentBaselines: {
 	// 	Fidelity: 0, // total contributed before tracking began
 	// 	Robinhood: 0
-	// }
+	// },
+	// investmentTrackingStartDate: '2026-06-08' // optional fallback if no snapshots yet
 };

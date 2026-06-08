@@ -258,7 +258,7 @@ export function buildAccountBalanceHistory({
 		chartConfig,
 		isDummyData: useDummyData,
 		investmentContributionTimeline: isInvestingAccountLabel(bankLabel)
-			? (loadInvestmentContributionTimeline(bankLabel) ?? undefined)
+			? (loadInvestmentContributionTimeline(bankLabel, useDummyData) ?? undefined)
 			: undefined
 	};
 }

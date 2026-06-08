@@ -45,15 +45,27 @@ function isCashMovementSubtype(subtype: string | undefined): boolean {
 	return CASH_MOVEMENT_SUBTYPES.has(subtype);
 }
 
+const FIDELITY_CONTRIBUTION_SUBTYPES = new Set([
+	'contribution',
+	'deposit',
+	'withdrawal',
+	'distribution'
+]);
+
 /** External cash in/out — no linked security (e.g. bank transfer). */
 export function isBankCashMovement(transaction: InvestmentTransaction): boolean {
 	if (hasSecurity(transaction)) return false;
 
-	if (transaction.type === 'cash' || transaction.type === 'fee') {
-		return true;
+	if (transaction.type === 'cash') {
+		return isCashMovementSubtype(transaction.subtype);
 	}
 
 	return isCashMovementSubtype(transaction.subtype);
+}
+
+/** Fidelity payroll deposits and explicit cash in/out only — not fees or fund transfers. */
+export function isFidelityContributionMovement(transaction: InvestmentTransaction): boolean {
+	return FIDELITY_CONTRIBUTION_SUBTYPES.has(transaction.subtype);
 }
 
 function isDividendSubtype(subtype: string | undefined): boolean {
@@ -140,11 +152,7 @@ export function classifyInvestmentTransaction(
 	const label = itemLabel.trim();
 
 	if (label === 'Fidelity') {
-		if (isBankCashMovement(transaction)) {
-			return { kind: 'contribution', delta: contributionDeltaFromAmount(transaction.amount) };
-		}
-
-		if (transaction.subtype === 'contribution' || transaction.subtype === 'deposit') {
+		if (isFidelityContributionMovement(transaction)) {
 			return { kind: 'contribution', delta: contributionDeltaFromAmount(transaction.amount) };
 		}
 
