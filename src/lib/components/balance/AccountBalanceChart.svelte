@@ -178,7 +178,8 @@
 	});
 
 	const totalBalanceChange = $derived.by(() => {
-		const getValue = (point: (typeof totalChartData)[number]) => chartPointTotal(point);
+		const getValue = (point: (typeof totalChartData)[number]) =>
+			typeof point.total === 'number' ? point.total : chartPointTotal(point);
 
 		if (hoveredChartPoint) {
 			const endIndex = totalChartData.findIndex(

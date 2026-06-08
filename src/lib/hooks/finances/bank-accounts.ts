@@ -46,7 +46,7 @@ export function accountSeriesKey(accountId: string): string {
 /** Sums every account series value stored on a chart point. */
 export function chartPointTotal(point: AccountBalanceChartPoint): number {
 	return Object.entries(point).reduce((sum, [key, value]) => {
-		if (key === 'date' || key === 'sortDate') return sum;
+		if (key === 'date' || key === 'sortDate' || key === 'total') return sum;
 		return sum + (typeof value === 'number' ? value : 0);
 	}, 0);
 }
