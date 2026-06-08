@@ -46,7 +46,7 @@ pnpm preview   # smoke-test the Node server (adapter-node)
 Uses `@sveltejs/adapter-node` with `Dockerfile` and `docker-compose.yml`. Copy [`.env.docker.example`](.env.docker.example) to `.env`, set `BALANCE_LOG_CRON_TOKEN` and optional `ORIGIN`, then:
 
 ```sh
-pnpm deploy:docker
+pnpm run deploy
 ```
 
 The app binds to `127.0.0.1:${HOST_PORT:-3001}` on the host. SQLite data persists in `./database/`. Table definitions live in [`database/schema.sql`](database/schema.sql); the app also creates them on first run. Use `pnpm update-balances` (or cron + `scripts/run-balance-log.sh`) to refresh balances when webhooks are unavailable.
