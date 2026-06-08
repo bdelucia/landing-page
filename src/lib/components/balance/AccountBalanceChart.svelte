@@ -13,6 +13,7 @@
 	} from '$lib/hooks/finances/bank-accounts';
 	import {
 		CHART_TIME_RANGE_OPTIONS,
+		chartBalanceChange,
 		filterChartDataByRange,
 		type ChartTimeRange
 	} from '$lib/hooks/chart/chart-time-range';
@@ -40,6 +41,11 @@
 	const balanceMoney = new Intl.NumberFormat('en-US', {
 		style: 'currency',
 		currency: 'USD',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2
+	});
+
+	const percentFormat = new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2
 	});
@@ -137,6 +143,21 @@
 		return categoryTotalsFromChartPoint(detail.accounts, itemLabelsByItemId, hoveredChartPoint);
 	});
 
+	const totalBalanceChange = $derived.by(() => {
+		const getValue = (point: (typeof totalChartData)[number]) => chartPointTotal(point);
+
+		if (hoveredChartPoint) {
+			const endIndex = totalChartData.findIndex(
+				(point) => point.sortDate === hoveredChartPoint.sortDate
+			);
+			if (endIndex >= 0) {
+				return chartBalanceChange(totalChartData, getValue, endIndex);
+			}
+		}
+
+		return chartBalanceChange(totalChartData, getValue);
+	});
+
 	const displayedTotalValue = $derived.by(() => {
 		if (hoveredChartPoint) {
 			if (activeChart === 'total') {
@@ -224,17 +245,55 @@
 		<div class="border-border flex flex-col items-stretch border-b sm:flex-row">
 			<div class="flex flex-1 items-center gap-3 px-5 py-4 sm:px-6 sm:py-5">
 				<span class="text-muted-foreground text-sm font-medium">Total</span>
-				<span
-					class="text-primary text-2xl font-semibold sm:text-3xl"
-					role="status"
-					aria-live="polite"
-				>
-					<AnimatedBalanceCounter
-						value={displayedTotalValue}
-						format={(amount) => balanceMoney.format(amount)}
-						class="font-semibold"
-					/>
-				</span>
+				<div class="flex flex-col gap-0.5">
+					<span
+						class="text-primary text-2xl font-semibold sm:text-3xl"
+						role="status"
+						aria-live="polite"
+					>
+						<AnimatedBalanceCounter
+							value={displayedTotalValue}
+							format={(amount) => balanceMoney.format(amount)}
+							class="font-semibold"
+						/>
+					</span>
+
+					{#if totalBalanceChange}
+						{@const change = totalBalanceChange}
+						{@const isPositive = change.amount > 0}
+						{@const isNegative = change.amount < 0}
+						<span
+							class="flex items-center gap-1 text-sm font-semibold {isPositive
+								? 'text-income'
+								: isNegative
+									? 'text-debt'
+									: 'text-muted-foreground'}"
+							role="status"
+							aria-live="polite"
+						>
+							<svg
+								class="size-3 shrink-0"
+								viewBox="0 0 12 12"
+								aria-hidden="true"
+								fill="currentColor"
+							>
+								{#if isNegative}
+									<polygon points="6,8 1,3 11,3" />
+								{:else}
+									<polygon points="6,4 1,9 11,9" />
+								{/if}
+							</svg>
+							<span>
+								{balanceMoney.format(Math.abs(change.amount))}
+								{#if change.percent != null}
+									<span class="font-medium">
+										({isNegative ? '-' : ''}{percentFormat.format(Math.abs(change.percent))}%)
+									</span>
+								{/if}
+							</span>
+						</span>
+					{/if}
+				</div>
 			</div>
 
 			{#if totalOnly && categoryHeaderItems.length > 0}

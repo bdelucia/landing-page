@@ -72,3 +72,28 @@ export function filterChartDataByRange<T extends { sortDate: string }>(
 
 	return data.filter((point) => point.sortDate >= cutoff);
 }
+
+export type ChartBalanceChange = {
+	amount: number;
+	percent: number | null;
+};
+
+/** Compares the first value in a filtered chart series to an end point (last by default). */
+export function chartBalanceChange<T>(
+	data: T[],
+	getValue: (point: T) => number,
+	endIndex?: number
+): ChartBalanceChange | null {
+	if (data.length === 0) return null;
+
+	const endIdx = endIndex ?? data.length - 1;
+	if (endIndex == null && data.length < 2) return null;
+	if (endIdx < 0 || endIdx >= data.length) return null;
+
+	const start = getValue(data[0]);
+	const end = getValue(data[endIdx]);
+	const amount = end - start;
+	const percent = start !== 0 ? (amount / Math.abs(start)) * 100 : null;
+
+	return { amount, percent };
+}
