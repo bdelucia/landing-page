@@ -2,6 +2,7 @@ import type { DashboardFinances, DashboardWeather } from '$lib/hooks/dashboard/d
 import { apiSecrets } from '$lib/server/config/secrets';
 import { isPlaidLinked } from '$lib/server/config/integration-config';
 import { loadLatestBalancesFromDb } from '$lib/server/balances/latest-balance-snapshots';
+import { prepareBalanceSnapshots } from '$lib/server/balances/sandbox-balance-snapshots';
 import { fetchCurrentWeather } from '$lib/server/weather/open-weather';
 import { fetchRecentTransactions } from '$lib/server/plaid/plaid-transactions';
 
@@ -16,40 +17,41 @@ export function loadDashboardWeather(): Promise<DashboardWeather> {
 		}));
 }
 
-export function loadDashboardFinances(): Promise<DashboardFinances> {
-	return fetchRecentTransactions(5)
-		.then((transactionsResult) => {
-			if (!isPlaidLinked(apiSecrets)) {
-				return {
-					transactions: transactionsResult.transactions,
-					transactionsError: transactionsResult.error,
-					accounts: [],
-					accountBalancesError: 'Plaid access token is not set in secrets.local.ts',
-					bankAccountDetails: {},
-					bankAccountDetailsError: 'Plaid access token is not set in secrets.local.ts'
-				};
-			}
+export async function loadDashboardFinances(): Promise<DashboardFinances> {
+	try {
+		const transactionsResult = await fetchRecentTransactions(5);
 
-			const balances = loadLatestBalancesFromDb(apiSecrets.plaid);
-
+		if (!isPlaidLinked(apiSecrets)) {
 			return {
 				transactions: transactionsResult.transactions,
 				transactionsError: transactionsResult.error,
-				accounts: balances.accounts,
-				accountBalancesError: balances.error,
-				bankAccountDetails: balances.byItemId,
-				bankAccountDetailsError: balances.error
-			};
-		})
-		.catch((error: unknown) => {
-			const message = error instanceof Error ? error.message : 'Failed to load account data';
-			return {
-				transactions: [],
-				transactionsError: message,
 				accounts: [],
-				accountBalancesError: message,
+				accountBalancesError: 'Plaid access token is not set in secrets.local.ts',
 				bankAccountDetails: {},
-				bankAccountDetailsError: message
+				bankAccountDetailsError: 'Plaid access token is not set in secrets.local.ts'
 			};
-		});
+		}
+
+		await prepareBalanceSnapshots(apiSecrets.plaid);
+		const balances = loadLatestBalancesFromDb(apiSecrets.plaid);
+
+		return {
+			transactions: transactionsResult.transactions,
+			transactionsError: transactionsResult.error,
+			accounts: balances.accounts,
+			accountBalancesError: balances.error,
+			bankAccountDetails: balances.byItemId,
+			bankAccountDetailsError: balances.error
+		};
+	} catch (error: unknown) {
+		const message = error instanceof Error ? error.message : 'Failed to load account data';
+		return {
+			transactions: [],
+			transactionsError: message,
+			accounts: [],
+			accountBalancesError: message,
+			bankAccountDetails: {},
+			bankAccountDetailsError: message
+		};
+	}
 }

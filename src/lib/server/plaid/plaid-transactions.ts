@@ -295,9 +295,23 @@ async function fetchTransactionsForItem(
 	count: number
 ): Promise<{ transactions: TransactionItem[]; error: string | null }> {
 	const label = resolveItemLabel(item);
+	const preferInvestmentsApi =
+		isInvestingAccountLabel(label) && plaid.environment !== 'sandbox';
 
-	if (isInvestingAccountLabel(label)) {
-		return fetchInvestmentTransactionsForItem(plaid, item, count);
+	if (preferInvestmentsApi) {
+		const investmentResult = await fetchInvestmentTransactionsForItem(plaid, item, count);
+
+		if (!investmentResult.error) {
+			return investmentResult;
+		}
+
+		const bankingResult = await fetchBankingTransactionsForItem(plaid, item, count);
+
+		if (!bankingResult.error || bankingResult.transactions.length > 0) {
+			return bankingResult;
+		}
+
+		return investmentResult;
 	}
 
 	return fetchBankingTransactionsForItem(plaid, item, count);
@@ -319,7 +333,7 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = apiSecrets;
-	const cacheKey = `plaid-transactions:v3:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
+	const cacheKey = `plaid-transactions:v4:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
 		.map((item) => item.itemId ?? item.accessToken)
 		.join(',')}`;
 
@@ -346,9 +360,11 @@ async function fetchRecentTransactionsUncached(
 	);
 
 	const transactions = sortTransactionItems(results.flatMap((result) => result.transactions));
-	const errors = results
-		.map((result) => result.error)
-		.filter((message): message is string => !!message);
+	const errors = [
+		...new Set(
+			results.map((result) => result.error).filter((message): message is string => !!message)
+		)
+	];
 
 	if (transactions.length === 0 && errors.length > 0) {
 		return { transactions: [], error: errors[0] };
