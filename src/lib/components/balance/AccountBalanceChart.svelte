@@ -6,6 +6,7 @@
 	} from '$lib/components/ui/chart/chart-utils';
 	import type { CategoryBalanceSummary } from '$lib/hooks/finances/account-balances';
 	import { investmentStatsFromTimeline } from '$lib/hooks/finances/investment-contribution-timeline';
+	import { padInvestmentChartDataForRange } from '$lib/hooks/finances/investment-chart-padding';
 	import {
 		accountSeriesKey,
 		categoryTotalsFromChartPoint,
@@ -87,7 +88,24 @@
 		}
 	} satisfies ChartConfig);
 
-	const filteredChartData = $derived(filterChartDataByRange(detail.chartData, activeTimeRange));
+	const rangeFilteredChartData = $derived(
+		filterChartDataByRange(detail.chartData, activeTimeRange)
+	);
+
+	const filteredChartData = $derived.by(() => {
+		const timeline = detail.investmentContributionTimeline;
+		if (!timeline) {
+			return rangeFilteredChartData;
+		}
+
+		return padInvestmentChartDataForRange(
+			rangeFilteredChartData,
+			detail.chartData,
+			activeTimeRange,
+			timeline,
+			detail.accounts.map((account) => account.id)
+		);
+	});
 
 	const totalChartData = $derived(
 		filteredChartData.map((point) => ({
