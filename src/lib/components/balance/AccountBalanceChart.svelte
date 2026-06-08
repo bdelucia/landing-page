@@ -173,6 +173,8 @@
 		return totalBalance;
 	});
 
+	const firstFilteredSortDate = $derived(filteredChartData[0]?.sortDate ?? null);
+
 	const activeChartSortDate = $derived.by(() => {
 		if (hoveredChartPoint?.sortDate) {
 			return hoveredChartPoint.sortDate;
@@ -189,7 +191,12 @@
 			return null;
 		}
 
-		return investmentStatsFromTimeline(displayedTotalValue, sortDate, timeline);
+		return investmentStatsFromTimeline(
+			displayedTotalValue,
+			sortDate,
+			timeline,
+			firstFilteredSortDate
+		);
 	});
 
 	const hoverDatePosition = $derived.by(() => {

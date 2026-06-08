@@ -17,7 +17,7 @@ import {
 import {
 	readInvestmentBaselineAmount,
 	resolveInvestmentTrackingStartDate,
-	isOnOrAfterTrackingStart
+	isAfterTrackingStart
 } from '$lib/server/investments/investment-baseline-config';
 import {
 	classifyInvestmentTransaction,
@@ -101,7 +101,7 @@ function sumContributionDeltas(itemLabel: string, trackingStartDate: string | nu
 			SELECT COALESCE(SUM(contribution_delta), 0) AS totalDelta
 			FROM ${INVESTMENT_PROCESSED_TRANSACTIONS_TABLE}
 			WHERE plaid_item_label = ?
-				AND transaction_date >= ?
+				AND transaction_date > ?
 		`
 		)
 		.get(trimmedLabel, trackingStartDate) as { totalDelta: number };
@@ -206,7 +206,7 @@ async function syncContributionsForItem(plaid: PlaidConfig, item: PlaidLinkedIte
 	clearProcessedTransactions(itemLabel);
 
 	const transactions = (await fetchInvestmentTransactions(plaid, item)).filter((transaction) =>
-		isOnOrAfterTrackingStart(transaction.date, itemLabel, false)
+		isAfterTrackingStart(transaction.date, itemLabel, false)
 	);
 	const reinvestmentPairs = findDividendReinvestmentPairs(transactions);
 	let applied = 0;
@@ -397,7 +397,7 @@ export function loadInvestmentContributionTimeline(
 			WHERE plaid_item_label = ?
 				AND contribution_delta != 0
 				AND transaction_date IS NOT NULL
-				AND transaction_date >= ?
+				AND transaction_date > ?
 			ORDER BY transaction_date ASC, investment_transaction_id ASC
 		`
 				)
@@ -416,21 +416,38 @@ export function loadInvestmentContributionTimeline(
 		);
 	}
 
-	let running = roundMoney(baseline);
+	return {
+		baseline: roundMoney(baseline),
+		trackingStartDate,
+		steps: buildContributionTimelineSteps(baseline, trackingStartDate, deltasByDate)
+	};
+}
+
+function buildContributionTimelineSteps(
+	baseline: number,
+	trackingStartDate: string | null,
+	deltasByDate: Map<string, number>
+): InvestmentContributionTimeline['steps'] {
 	const steps: InvestmentContributionTimeline['steps'] = [];
+
+	if (trackingStartDate) {
+		steps.push({ sortDate: trackingStartDate, contributions: roundMoney(baseline) });
+	}
+
+	let running = roundMoney(baseline);
 
 	for (const [sortDate, delta] of [...deltasByDate.entries()].sort(([left], [right]) =>
 		left.localeCompare(right)
 	)) {
+		if (trackingStartDate && sortDate <= trackingStartDate) {
+			continue;
+		}
+
 		running = roundMoney(running + delta);
 		steps.push({ sortDate, contributions: running });
 	}
 
-	return {
-		baseline: roundMoney(baseline),
-		trackingStartDate,
-		steps
-	};
+	return steps;
 }
 
 function latestContributionsFromTimeline(timeline: InvestmentContributionTimeline): number {

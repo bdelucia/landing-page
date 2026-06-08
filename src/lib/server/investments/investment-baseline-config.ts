@@ -44,7 +44,7 @@ export function resolveInvestmentTrackingStartDate(
 	);
 }
 
-export function isOnOrAfterTrackingStart(
+export function isAfterTrackingStart(
 	transactionDate: string,
 	itemLabel: string,
 	useDummyData = false
@@ -55,5 +55,5 @@ export function isOnOrAfterTrackingStart(
 		return false;
 	}
 
-	return transactionDate >= trackingStartDate;
+	return transactionDate > trackingStartDate;
 }
