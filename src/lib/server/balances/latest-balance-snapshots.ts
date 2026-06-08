@@ -174,11 +174,67 @@ function mapSnapshotRowToBankAccount(
 	};
 }
 
+function fetchLatestBatchRowsForItem(
+	item: PlaidLinkedItem,
+	tableName: SnapshotTableName
+): LatestSnapshotRow[] {
+	const itemLabel = resolveItemLabel(item);
+	const itemId = resolveSnapshotItemId(item, itemLabel);
+	const db = getDatabase();
+
+	const scopeClauses = ['plaid_item_label = ?'];
+	const scopeParams: string[] = [itemLabel];
+
+	if (itemId) {
+		scopeClauses.push('plaid_item_id = ?');
+		scopeParams.push(itemId);
+	}
+
+	const maxRow = db
+		.prepare(
+			`
+		SELECT MAX(snapshot_time) AS maxTime
+		FROM ${tableName}
+		WHERE ${scopeClauses.join(' OR ')}
+	`
+		)
+		.get(...scopeParams) as { maxTime: string | null } | undefined;
+
+	if (!maxRow?.maxTime) {
+		return [];
+	}
+
+	const batchStatement = db.prepare(`
+		SELECT
+			snapshot.snapshot_time AS snapshotTime,
+			snapshot.plaid_item_label AS itemLabel,
+			snapshot.plaid_item_id AS itemId,
+			snapshot.plaid_account_id AS accountId,
+			snapshot.account_name AS accountName,
+			snapshot.account_mask AS accountMask,
+			snapshot.account_type AS accountType,
+			snapshot.account_subtype AS accountSubtype,
+			snapshot.balance_current AS balanceCurrent,
+			snapshot.balance_available AS balanceAvailable
+		FROM ${tableName} AS snapshot
+		WHERE snapshot.snapshot_time = ?
+			AND (${scopeClauses.map((clause) => `snapshot.${clause}`).join(' OR ')})
+		ORDER BY snapshot.plaid_account_id ASC
+	`);
+
+	return batchStatement.all(maxRow.maxTime, ...scopeParams) as LatestSnapshotRow[];
+}
+
 function latestRowsForItem(
 	item: PlaidLinkedItem,
 	allLatestRows: LatestSnapshotRow[],
 	tableName: SnapshotTableName
 ): LatestSnapshotRow[] {
+	const latestBatchRows = fetchLatestBatchRowsForItem(item, tableName);
+	if (latestBatchRows.length > 0) {
+		return latestBatchRows;
+	}
+
 	const scope = buildSnapshotItemScope(item, tableName);
 	const matchedRows = snapshotRowsForItem(allLatestRows, scope);
 

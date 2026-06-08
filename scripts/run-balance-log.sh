@@ -23,4 +23,8 @@ fi
 /usr/bin/curl --fail --silent --show-error \
 	-X POST \
 	-H "Authorization: Bearer ${BALANCE_LOG_CRON_TOKEN}" \
-	"http://127.0.0.1:${HOST_PORT}/api/internal/log-plaid-balances"
+	"http://127.0.0.1:${HOST_PORT}/api/internal/log-plaid-balances" \
+	|| {
+		echo "Balance sync failed. Check docker logs for [balance-sync] errors."
+		exit 1
+	}

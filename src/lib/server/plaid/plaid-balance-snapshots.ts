@@ -3,6 +3,10 @@ import { getDatabase } from '$lib/server/db/database';
 import { getPlaidLinkedItems, isPlaidLinked } from '$lib/server/config/integration-config';
 import { apiSecrets } from '$lib/server/config/secrets';
 import {
+	fetchInvestmentAccountsWithBalances,
+	shouldUseInvestmentsBalanceApi
+} from '$lib/server/plaid/plaid-investment-balances';
+import {
 	findLinkedItemByPlaidItemId,
 	resolvePlaidItemIdForItem
 } from '$lib/server/plaid/plaid-item-registry';
@@ -60,6 +64,19 @@ function toSnapshotRow(
 	};
 }
 
+async function fetchRowsViaBalanceGet(
+	plaid: PlaidConfig,
+	item: PlaidLinkedItem,
+	snapshotTime: string,
+	resolvedItemId: string | null
+): Promise<SnapshotRow[]> {
+	const client = createPlaidClient(plaid);
+	const response = await client.accountsBalanceGet({ access_token: item.accessToken });
+	return response.data.accounts.map((account) =>
+		toSnapshotRow(account, item, snapshotTime, resolvedItemId)
+	);
+}
+
 async function fetchRowsForItem(
 	plaid: PlaidConfig,
 	item: PlaidLinkedItem,
@@ -67,11 +84,22 @@ async function fetchRowsForItem(
 	plaidItemId: string | null = null
 ): Promise<SnapshotRow[]> {
 	const resolvedItemId = plaidItemId ?? (await resolvePlaidItemIdForItem(plaid, item));
-	const client = createPlaidClient(plaid);
-	const response = await client.accountsBalanceGet({ access_token: item.accessToken });
-	return response.data.accounts.map((account) =>
-		toSnapshotRow(account, item, snapshotTime, resolvedItemId)
-	);
+	const itemLabel = resolveItemLabel(item);
+
+	if (shouldUseInvestmentsBalanceApi(itemLabel, plaid.environment)) {
+		try {
+			const accounts = await fetchInvestmentAccountsWithBalances(plaid, item);
+			return accounts.map((account) =>
+				toSnapshotRow(account, item, snapshotTime, resolvedItemId)
+			);
+		} catch (investmentsError) {
+			console.warn(
+				`[balance-sync] Investments holdings fetch failed for "${itemLabel}", falling back to /accounts/balance/get: ${formatPlaidApiError(investmentsError)}`
+			);
+		}
+	}
+
+	return fetchRowsViaBalanceGet(plaid, item, snapshotTime, resolvedItemId);
 }
 
 export type RecordPlaidBalanceSnapshotForItemResult = {
@@ -206,14 +234,18 @@ export async function recordPlaidBalanceSnapshot(
 	const rows: SnapshotRow[] = [];
 
 	for (const item of linkedItems) {
+		const itemLabel = resolveItemLabel(item);
+
 		try {
 			const itemRows = await fetchRowsForItem(plaid, item, snapshotTime);
 			rows.push(...itemRows);
 		} catch (error) {
+			const message = formatPlaidApiError(error);
 			failures.push({
-				itemLabel: resolveItemLabel(item),
-				error: formatPlaidApiError(error)
+				itemLabel,
+				error: message
 			});
+			console.error(`[balance-sync] Failed to sync "${itemLabel}": ${message}`);
 		}
 	}
 

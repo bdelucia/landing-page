@@ -31,7 +31,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json(result, { status: 412 });
 	}
 
-	if (result.inserted === 0 && result.failures.length > 0) {
+	if (result.failures.length > 0) {
+		return json(result, { status: 502 });
+	}
+
+	if (result.inserted === 0) {
 		return json(result, { status: 502 });
 	}
 
