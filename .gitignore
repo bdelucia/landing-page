@@ -30,6 +30,6 @@ vite.config.ts.timestamp-*
 .cursor/
 
 # Runtime SQLite/log artifacts
-data/*.sqlite
-data/*.sqlite-*
+database/*.sqlite
+database/*.sqlite-*
 logs/

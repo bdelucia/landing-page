@@ -16,11 +16,11 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: '3000'
-      SQLITE_DB_PATH: ${SQLITE_DB_PATH:-/app/data/finance.sqlite}
+      SQLITE_DB_PATH: ${SQLITE_DB_PATH:-/app/database/finance.sqlite}
       BALANCE_LOG_CRON_TOKEN: ${BALANCE_LOG_CRON_TOKEN:-}
       # Optional: set in project `.env` when using Tailscale Serve (see .env.docker.example)
       ORIGIN: ${ORIGIN:-}
       # Optional: only for local webhook testing — never set in production
       PLAID_WEBHOOK_SKIP_VERIFICATION: ${PLAID_WEBHOOK_SKIP_VERIFICATION:-}
     volumes:
-      - ./data:/app/data
+      - ./database:/app/database

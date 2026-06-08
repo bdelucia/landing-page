@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-const DEFAULT_SQLITE_DB_PATH = 'data/finance.sqlite';
+const DEFAULT_SQLITE_DB_PATH = 'database/finance.sqlite';
 
 let database: DatabaseSync | null = null;
 
