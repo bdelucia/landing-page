@@ -36,14 +36,14 @@
 
 <style>
 	.input-submit {
-		width: clamp(2rem, 1.5rem + 1.5vw, 2.5rem);
-		height: clamp(2rem, 1.5rem + 1.5vw, 2.5rem);
+		width: 2rem;
+		height: 2rem;
 	}
 
 	.input-submit__icon {
 		display: inline-flex;
-		width: clamp(1.125rem, 0.875rem + 0.75vw, 1.5rem);
-		height: clamp(1.125rem, 0.875rem + 0.75vw, 1.5rem);
+		width: 1.25rem;
+		height: 1.25rem;
 		align-items: center;
 		justify-content: center;
 	}
