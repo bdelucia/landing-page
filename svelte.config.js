@@ -4,10 +4,10 @@ import { relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
-const personalConfigLocal = resolve(root, 'src/data/personal-info.local.ts');
-const personalConfigResolved = existsSync(personalConfigLocal)
-	? personalConfigLocal
-	: resolve(root, 'src/data/personal-info.example.ts');
+const secretsLocal = resolve(root, 'src/data/secrets.local.ts');
+const secretsResolved = existsSync(secretsLocal)
+	? secretsLocal
+	: resolve(root, 'src/data/secrets.example.ts');
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -26,8 +26,8 @@ const config = {
 		adapter: adapter(),
 		alias: {
 			$data: resolve(root, 'src/data'),
-			// Not under $data — Vite would resolve $data/personal-config as src/data/personal-config
-			'$personal-config': personalConfigResolved
+			// Not under $data — Vite would resolve $data/secrets-config as src/data/secrets-config
+			'$secrets-config': secretsResolved
 		}
 	}
 };

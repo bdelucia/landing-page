@@ -23,7 +23,7 @@
 	<button
 		{type}
 		aria-label={ariaLabel}
-		class="input-submit inline-flex shrink-0 items-center justify-center rounded-full bg-tertiary text-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50 {className}"
+		class="input-submit bg-tertiary text-primary focus-visible:outline-focus inline-flex shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {className}"
 		in:fly={{ y: 8, duration: 200 }}
 		out:fly={{ y: 8, duration: 150 }}
 		{...buttonProps}

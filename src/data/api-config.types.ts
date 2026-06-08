@@ -1,5 +1,5 @@
 /**
- * Integration credentials and options (server-only via `personalSecrets`).
+ * Integration credentials and options (server-only via `apiSecrets`).
  * @see https://openweathermap.org/api/one-call-3 — OpenWeather One Call 3.0
  * @see https://plaid.com/docs/api/#api-host — Plaid
  */

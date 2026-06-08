@@ -19,8 +19,8 @@ Thumbs.db
 !.env.example
 !.env.test
 
-# Local profile (copy from personal-info.example.ts)
-src/data/personal-info.local.ts
+# Local API keys (copy from secrets.example.ts)
+src/data/secrets.local.ts
 
 # Vite
 vite.config.js.timestamp-*

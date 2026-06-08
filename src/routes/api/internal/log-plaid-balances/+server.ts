@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { recordPlaidBalanceSnapshot } from '$lib/server/plaid-balance-snapshots';
+import { recordPlaidBalanceSnapshot } from '$lib/server/plaid/plaid-balance-snapshots';
 import type { RequestHandler } from './$types';
 
 function readBearerToken(header: string | null): string {

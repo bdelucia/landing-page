@@ -1,7 +1,7 @@
 @import '@fontsource-variable/google-sans-flex/wght.css';
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import './lib/theme.css';
+@import './lib/styles/theme.css';
 
 @theme inline {
 	--font-sans: var(--font-sans);

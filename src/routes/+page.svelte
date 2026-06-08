@@ -1,13 +1,13 @@
 <script lang="ts">
 	import geminiIcon from '$lib/assets/logos/Google_Gemini_icon_2025.svg';
-	import { sendToGemini } from '$lib/send-to-gemini';
-	import { getWelcomeMessage } from '$data/personal-info';
+	import { sendToGemini } from '$lib/hooks/gemini/send-to-gemini';
+	import { getWelcomeMessage } from '$lib/hooks/greeting/time-of-day-greeting';
 	import { Input, InputIcon, InputSubmit } from '$lib/components/input/index.js';
-	import QuickLink from '$lib/components/QuickLink.svelte';
-	import TransactionList from '$lib/components/TransactionList.svelte';
-	import WeatherDisplay from '$lib/components/WeatherDisplay.svelte';
-	import WeatherDisplaySkeleton from '$lib/components/WeatherDisplaySkeleton.svelte';
-	import { quickLinks } from '$lib/quick-links';
+	import QuickLink from '$lib/components/quick-links/QuickLink.svelte';
+	import TransactionList from '$lib/components/transactions/TransactionList.svelte';
+	import WeatherDisplay from '$lib/components/weather/WeatherDisplay.svelte';
+	import WeatherDisplaySkeleton from '$lib/components/weather/WeatherDisplaySkeleton.svelte';
+	import { quickLinks } from '$lib/hooks/links/quick-links';
 
 	let { data } = $props();
 
@@ -23,9 +23,11 @@
 
 <div class="relative w-full">
 	<div
-		class="mx-auto flex w-full max-w-3xl min-h-[calc(100dvh-4rem)] flex-col justify-center gap-6 py-8"
+		class="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-3xl flex-col justify-center gap-6 py-8"
 	>
-		<div class="weather-slot flex w-full justify-center lg:absolute lg:start-0 lg:top-0 lg:z-20 lg:w-auto lg:justify-start">
+		<div
+			class="weather-slot flex w-full justify-center lg:absolute lg:start-0 lg:top-0 lg:z-20 lg:w-auto lg:justify-start"
+		>
 			{#await data.weather}
 				<WeatherDisplaySkeleton />
 			{:then weather}
@@ -33,7 +35,7 @@
 			{/await}
 		</div>
 
-		<h1 class="text-center text-3xl font-medium text-primary sm:text-4xl">
+		<h1 class="text-primary text-center text-3xl font-medium sm:text-4xl">
 			{welcomeHeading}
 		</h1>
 

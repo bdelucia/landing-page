@@ -1,25 +1,23 @@
-# sv
+# landing-page
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Personal SvelteKit landing page with Plaid balances, weather, and quick links.
 
-## Personal info (local config)
+## Secrets (local config)
 
-After cloning, copy the example file and edit it for yourself:
+After cloning, copy the example file and add any API integrations you use:
 
 ```sh
-cp src/data/personal-info.example.ts src/data/personal-info.local.ts
+cp src/data/secrets.example.ts src/data/secrets.local.ts
 ```
 
-Edit `src/data/personal-info.local.ts` with your name, welcome text, and any API blocks you use. That file is **gitignored** so secrets are not committed.
+Edit `src/data/secrets.local.ts` with your keys. That file is **gitignored** so secrets are not committed. Field docs and allowed values are in [`src/data/api-config.types.ts`](src/data/api-config.types.ts) (IDE hover on each property).
 
-- **`personalInfo`** — safe for UI (`displayName`, optional `welcomeMessage`). Import from `$data/personal-info`.
-- **`personalSecrets`** — server only. Optional objects per integration (omit to disable). Field docs and allowed values are in [`src/data/api-config.types.ts`](src/data/api-config.types.ts) (IDE hover on each property).
-  - **`openWeather`** — `apiKey` (needs [One Call 3.0](https://openweathermap.org/api/one-call-3) subscription), `zipCode`, `countryCode` (ISO alpha-2), `units` (`metric` | `imperial` | `standard`)
-  - **`plaid`** — `clientId`, `secret`, `environment`, `accessToken` (one linked institution; all accounts under it), optional `itemId`, or `items[]` for multiple banks (each with `accessToken` and optional `label`)
+- **`openWeather`** — `apiKey` (needs [One Call 3.0](https://openweathermap.org/api/one-call-3) subscription), `zipCode`, `countryCode` (ISO alpha-2), `units` (`metric` | `imperial` | `standard`)
+- **`plaid`** — `clientId`, `secret`, `environment`, `accessToken` (one linked institution; all accounts under it), optional `itemId`, or `items[]` for multiple banks (each with `accessToken` and optional `label`)
 
-Import secrets from `$lib/server/personal-secrets` in `+server.ts` / `+page.server.ts` only — not from `.svelte` files. Use `isOpenWeatherConfigured`, `isPlaidConfigured`, and `isPlaidLinked` before calling each API.
+Import secrets from `$lib/server/config/secrets` in `+server.ts` / `+page.server.ts` only — not from `.svelte` files. Use `isOpenWeatherConfigured`, `isPlaidConfigured`, and `isPlaidLinked` before calling each API.
 
-If `personal-info.local.ts` is missing, the app falls back to `personal-info.example.ts` so installs and CI still build.
+If `secrets.local.ts` is missing, the app falls back to `secrets.example.ts` so installs and CI still build.
 
 ## Gemini integration
 
@@ -29,44 +27,26 @@ Submitting a prompt from this landing page opens `https://gemini.google.com/app?
 
 The extension’s [setup instructions](https://addons.mozilla.org/en-US/firefox/addon/gemini-url-search/) also describe an optional `@g` address-bar shortcut (`https://gemini.google.com/app?q=%s`). The landing page uses the same URL pattern, so you do not need `@g` when submitting from this site.
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-pnpm dlx sv@0.14.0 create --template minimal --types ts --add prettier eslint --install pnpm .
-```
-
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm install
+pnpm dev
 ```
 
 ## Building
 
-To create a production version of your app:
-
 ```sh
-pnpm run build
-pnpm run preview   # smoke-test the Node server (adapter-node)
+pnpm build
+pnpm preview   # smoke-test the Node server (adapter-node)
 ```
 
-## Deploy (Docker on Raspberry Pi + Tailscale)
+## Deploy (Docker)
 
-The project uses `@sveltejs/adapter-node` with a `Dockerfile` and `docker-compose.yml`. Access is intended **only over Tailscale**, not the public web.
+Uses `@sveltejs/adapter-node` with `Dockerfile` and `docker-compose.yml`. Copy [`.env.docker.example`](.env.docker.example) to `.env`, set `BALANCE_LOG_CRON_TOKEN` and optional `ORIGIN`, then:
 
-See **[docs/deploy-raspberry-pi.md](docs/deploy-raspberry-pi.md)** for setup, secrets, Tailscale Serve, and reboot behavior.
+```sh
+pnpm deploy:docker
+```
+
+The app binds to `127.0.0.1:${HOST_PORT:-3001}` on the host. SQLite data persists in `./data/`. Use `pnpm update-balances` (or cron + `scripts/run-balance-log.sh`) to refresh balances when webhooks are unavailable.

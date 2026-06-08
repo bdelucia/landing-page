@@ -1,7 +1,0 @@
-# Single-package project; settings apply to this repo (including Docker installs).
-packages:
-  - '.'
-
-# pnpm 10.26+ blocks postinstall scripts unless explicitly allowed (ERR_PNPM_IGNORED_BUILDS).
-allowBuilds:
-  esbuild: true

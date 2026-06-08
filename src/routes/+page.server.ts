@@ -1,4 +1,4 @@
-import { loadDashboardFinances, loadDashboardWeather } from '$lib/server/dashboard-data';
+import { loadDashboardFinances, loadDashboardWeather } from '$lib/server/dashboard/dashboard-data';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = () => ({

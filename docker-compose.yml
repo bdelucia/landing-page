@@ -1,5 +1,4 @@
 # Personal landing page — bind to localhost on the Pi; reach via Tailscale Serve or tailnet IP.
-# See docs/deploy-raspberry-pi.md
 
 services:
   landing-page:

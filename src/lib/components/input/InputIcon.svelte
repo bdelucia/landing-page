@@ -10,17 +10,13 @@
 		children?: Snippet;
 	};
 
-	let {
-		src,
-		alt = '',
-		size,
-		class: className = '',
-		children
-	}: Props = $props();
+	let { src, alt = '', size, class: className = '', children }: Props = $props();
 </script>
 
 <span
-	class="input-icon inline-flex shrink-0 items-center justify-center {size ? '' : 'input-icon--fluid'} {className}"
+	class="input-icon inline-flex shrink-0 items-center justify-center {size
+		? ''
+		: 'input-icon--fluid'} {className}"
 	style:width={size ? `${size}px` : undefined}
 	style:height={size ? `${size}px` : undefined}
 >

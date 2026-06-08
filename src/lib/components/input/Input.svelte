@@ -41,9 +41,7 @@
 
 	function getInlineAvailableWidth(container: HTMLDivElement): number {
 		const style = getComputedStyle(container);
-		const padding =
-			parseFloat(style.paddingLeft) +
-			parseFloat(style.paddingRight);
+		const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
 		const gap = parseFloat(style.columnGap || style.gap) || 16;
 
 		const leadingW = leadingEl?.offsetWidth ?? 0;
@@ -88,8 +86,7 @@
 		const textWidth = measure.offsetWidth;
 		const availableInline = getInlineAvailableWidth(container);
 		const lineHeight = getLineHeight(textarea);
-		const multiline =
-			textarea.scrollHeight > lineHeight + 2 || value.includes('\n');
+		const multiline = textarea.scrollHeight > lineHeight + 2 || value.includes('\n');
 
 		iconsStacked = textWidth >= availableInline - 1 || multiline;
 
@@ -135,7 +132,7 @@
 
 <div
 	bind:this={containerEl}
-	class="input-shell w-full max-w-3xl border-2 border-transparent bg-background hover:border-secondary focus-within:border-secondary {wrapperClass}"
+	class="input-shell bg-background hover:border-secondary focus-within:border-secondary w-full max-w-3xl border-2 border-transparent {wrapperClass}"
 	class:input-shell--stacked={iconsStacked}
 	class:input-shell--leading={hasLeading}
 	class:input-shell--trailing={hasTrailing}
@@ -151,7 +148,7 @@
 		bind:value
 		{placeholder}
 		{rows}
-		class="input-field min-w-0 resize-none bg-transparent text-primary placeholder:text-muted-foreground focus:outline-none {inputClass}"
+		class="input-field text-primary placeholder:text-muted-foreground min-w-0 resize-none bg-transparent focus:outline-none {inputClass}"
 		class:input-field--stacked={iconsStacked}
 		oninput={handleInput}
 		onkeydown={handleKeydown}
@@ -237,9 +234,7 @@
 		grid-template-areas: 'leading field';
 	}
 
-	.input-shell:not(.input-shell--stacked):not(.input-shell--leading):not(
-			.input-shell--trailing
-		) {
+	.input-shell:not(.input-shell--stacked):not(.input-shell--leading):not(.input-shell--trailing) {
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-areas: 'field';
 	}
