@@ -25,5 +25,9 @@ export const apiSecrets: ApiSecrets = {
 	// 	// 	{ accessToken: '', itemId: '', label: 'Robinhood' },
 	// 	// 	{ accessToken: '', itemId: '', label: 'Fidelity' }
 	// 	// ]
+	// },
+	// investmentBaselines: {
+	// 	Fidelity: 0, // total contributed before tracking began
+	// 	Robinhood: 0
 	// }
 };

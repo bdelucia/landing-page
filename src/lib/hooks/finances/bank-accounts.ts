@@ -4,6 +4,7 @@ import {
 	type AccountCategoryKey
 } from '$lib/hooks/finances/account-balances';
 import type { ChartConfig } from '$lib/components/ui/chart/chart-utils';
+import type { InvestmentContributionTimeline } from '$lib/hooks/finances/investment-contribution-timeline';
 
 /** Individual Plaid account under a linked Item (bank). */
 export type BankAccountItem = {
@@ -31,6 +32,8 @@ export type BankAccountDetail = {
 	chartData: AccountBalanceChartPoint[];
 	chartConfig: ChartConfig;
 	isDummyData: boolean;
+	/** Deposit/withdrawal history for hoverable contributions on investment charts. */
+	investmentContributionTimeline?: InvestmentContributionTimeline;
 };
 
 export type BankAccountDetailsByItem = Record<string, BankAccountDetail>;

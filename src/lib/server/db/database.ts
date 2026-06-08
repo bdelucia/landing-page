@@ -222,6 +222,59 @@ function ensureBalanceSnapshotTable(
 	`);
 }
 
+function ensureInvestmentTables(db: DatabaseSync): void {
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS investment_contribution_totals (
+			plaid_item_label TEXT PRIMARY KEY,
+			total_contributions REAL NOT NULL,
+			updated_at TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS investment_processed_transactions (
+			investment_transaction_id TEXT PRIMARY KEY,
+			plaid_item_label TEXT NOT NULL,
+			contribution_delta REAL NOT NULL,
+			processed_at TEXT NOT NULL
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_investment_processed_transactions_item
+			ON investment_processed_transactions (plaid_item_label);
+
+		CREATE TABLE IF NOT EXISTS investment_account_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			history_date TEXT NOT NULL,
+			plaid_item_label TEXT NOT NULL,
+			plaid_item_id TEXT,
+			plaid_account_id TEXT NOT NULL,
+			balance REAL NOT NULL,
+			contributions REAL NOT NULL,
+			earnings REAL NOT NULL,
+			source TEXT NOT NULL DEFAULT 'plaid',
+			synced_at TEXT NOT NULL DEFAULT (datetime('now'))
+		);
+
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_investment_history_unique
+			ON investment_account_history (plaid_item_label, plaid_account_id, history_date);
+
+		CREATE INDEX IF NOT EXISTS idx_investment_history_item_date
+			ON investment_account_history (plaid_item_label, history_date);
+	`);
+
+	ensureProcessedTransactionDateColumn(db);
+}
+
+function ensureProcessedTransactionDateColumn(db: DatabaseSync): void {
+	const columns = db
+		.prepare(`PRAGMA table_info(investment_processed_transactions)`)
+		.all() as Array<{ name: string }>;
+
+	if (columns.some((column) => column.name === 'transaction_date')) {
+		return;
+	}
+
+	db.exec(`ALTER TABLE investment_processed_transactions ADD COLUMN transaction_date TEXT`);
+}
+
 function ensureSchema(db: DatabaseSync): void {
 	ensureBalanceSnapshotTable(db, ACCOUNT_BALANCE_SNAPSHOTS_TABLE, 'account_balance_snapshots');
 	ensureBalanceSnapshotTable(
@@ -229,6 +282,7 @@ function ensureSchema(db: DatabaseSync): void {
 		ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
 		'account_balance_snapshots_dummy'
 	);
+	ensureInvestmentTables(db);
 }
 
 export function getDatabase(): DatabaseSync {

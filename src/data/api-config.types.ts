@@ -81,9 +81,17 @@ export type PlaidConfig = {
 
 export type PlaidEnvironment = 'sandbox' | 'development' | 'production';
 
+/**
+ * Starting contribution totals keyed by Plaid item `label` (e.g. `"Fidelity"`, `"Robinhood"`).
+ * Used as the baseline before new deposits/withdrawals are applied from Plaid transactions.
+ */
+export type InvestmentBaselines = Record<string, number>;
+
 export type ApiSecrets = {
 	/** Omit this object (or leave required fields blank) to disable OpenWeather */
 	openWeather?: OpenWeatherConfig;
 	/** Omit this object (or leave credentials blank) to disable Plaid */
 	plaid?: PlaidConfig;
+	/** Total contributed before automated tracking began, keyed by investment item label */
+	investmentBaselines?: InvestmentBaselines;
 };

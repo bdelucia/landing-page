@@ -58,7 +58,26 @@ CREATE INDEX IF NOT EXISTS idx_account_balance_snapshots_dummy_time
 CREATE INDEX IF NOT EXISTS idx_account_balance_snapshots_dummy_account_time
 	ON account_balance_snapshots_dummy (plaid_account_id, snapshot_time);
 
--- Investment account history (legacy; not written by current app code)
+-- Running contribution totals per linked investment item (seeded from secrets baselines)
+CREATE TABLE IF NOT EXISTS investment_contribution_totals (
+	plaid_item_label TEXT PRIMARY KEY,
+	total_contributions REAL NOT NULL,
+	updated_at TEXT NOT NULL
+);
+
+-- Plaid investment transactions already applied to contribution totals
+CREATE TABLE IF NOT EXISTS investment_processed_transactions (
+	investment_transaction_id TEXT PRIMARY KEY,
+	plaid_item_label TEXT NOT NULL,
+	contribution_delta REAL NOT NULL,
+	transaction_date TEXT,
+	processed_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_investment_processed_transactions_item
+	ON investment_processed_transactions (plaid_item_label);
+
+-- Daily balance / contributions / earnings snapshots for investment accounts
 CREATE TABLE IF NOT EXISTS investment_account_history (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	history_date TEXT NOT NULL,

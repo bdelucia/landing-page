@@ -12,6 +12,10 @@ import {
 } from '$lib/server/plaid/plaid-item-registry';
 import { createPlaidClient, formatPlaidApiError } from '$lib/server/plaid/plaid';
 import type { PlaidConfig, PlaidLinkedItem } from '$data/api-config.types';
+import {
+	recordInvestmentHistoryFromSnapshotRows,
+	syncInvestmentContributions
+} from '$lib/server/investments/investment-contributions';
 
 type SnapshotRow = {
 	snapshotTime: string;
@@ -143,6 +147,11 @@ export async function recordPlaidBalanceSnapshotForItem(
 		const rows = await fetchRowsForItem(plaid, item, snapshotTime, plaidItemId);
 		const inserted = insertSnapshotRows(rows);
 
+		if (inserted > 0) {
+			await syncInvestmentContributions(plaid);
+			recordInvestmentHistoryFromSnapshotRows(rows);
+		}
+
 		return {
 			snapshotTime,
 			inserted,
@@ -250,6 +259,15 @@ export async function recordPlaidBalanceSnapshot(
 	}
 
 	const inserted = insertSnapshotRows(rows);
+
+	if (inserted > 0) {
+		const contributionSync = await syncInvestmentContributions(plaid);
+		for (const error of contributionSync.errors) {
+			console.error(`[investment-sync] ${error}`);
+		}
+
+		recordInvestmentHistoryFromSnapshotRows(rows);
+	}
 
 	return {
 		snapshotTime,

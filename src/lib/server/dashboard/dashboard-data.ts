@@ -5,6 +5,7 @@ import { loadLatestBalancesFromDb } from '$lib/server/balances/latest-balance-sn
 import { prepareBalanceSnapshots } from '$lib/server/balances/sandbox-balance-snapshots';
 import { fetchCurrentWeather } from '$lib/server/weather/open-weather';
 import { fetchRecentTransactions } from '$lib/server/plaid/plaid-transactions';
+import { syncInvestmentContributions } from '$lib/server/investments/investment-contributions';
 
 export type { DashboardFinances, DashboardWeather } from '$lib/hooks/dashboard/dashboard-data';
 
@@ -34,6 +35,8 @@ export async function loadDashboardFinances(): Promise<DashboardFinances> {
 
 		if (apiSecrets.plaid.environment === 'sandbox') {
 			await prepareBalanceSnapshots(apiSecrets.plaid);
+		} else {
+			await syncInvestmentContributions(apiSecrets.plaid);
 		}
 
 		const balances = loadLatestBalancesFromDb(apiSecrets.plaid);

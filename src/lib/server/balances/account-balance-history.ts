@@ -1,4 +1,4 @@
-import { bankBrandColor } from '$lib/hooks/finances/account-balances';
+import { bankBrandColor, isInvestingAccountLabel } from '$lib/hooks/finances/account-balances';
 import {
 	accountSeriesKey,
 	type AccountBalanceChartPoint,
@@ -18,6 +18,7 @@ import {
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
 	getDatabase
 } from '$lib/server/db/database';
+import { loadInvestmentContributionTimeline } from '$lib/server/investments/investment-contributions';
 
 type SnapshotRow = {
 	snapshotTime: string;
@@ -255,6 +256,9 @@ export function buildAccountBalanceHistory({
 		headerAccounts,
 		chartData,
 		chartConfig,
-		isDummyData: useDummyData
+		isDummyData: useDummyData,
+		investmentContributionTimeline: isInvestingAccountLabel(bankLabel)
+			? (loadInvestmentContributionTimeline(bankLabel) ?? undefined)
+			: undefined
 	};
 }

@@ -5,6 +5,7 @@
 		type ChartConfig
 	} from '$lib/components/ui/chart/chart-utils';
 	import type { CategoryBalanceSummary } from '$lib/hooks/finances/account-balances';
+	import { investmentStatsFromTimeline } from '$lib/hooks/finances/investment-contribution-timeline';
 	import {
 		accountSeriesKey,
 		categoryTotalsFromChartPoint,
@@ -172,6 +173,25 @@
 		return totalBalance;
 	});
 
+	const activeChartSortDate = $derived.by(() => {
+		if (hoveredChartPoint?.sortDate) {
+			return hoveredChartPoint.sortDate;
+		}
+
+		return filteredChartData.at(-1)?.sortDate ?? null;
+	});
+
+	const displayedInvestmentStats = $derived.by(() => {
+		const timeline = detail.investmentContributionTimeline;
+		const sortDate = activeChartSortDate;
+
+		if (!timeline || !sortDate) {
+			return null;
+		}
+
+		return investmentStatsFromTimeline(displayedTotalValue, sortDate, timeline);
+	});
+
 	const hoverDatePosition = $derived.by(() => {
 		const ctx = chartContext;
 		const point = hoveredChartPoint;
@@ -243,57 +263,92 @@
 		</p>
 	{:else}
 		<div class="border-border flex flex-col items-stretch border-b sm:flex-row">
-			<div class="flex flex-1 items-center gap-3 px-5 py-4 sm:px-6 sm:py-5">
-				<span class="text-muted-foreground text-sm font-medium">Total</span>
-				<div class="flex flex-col gap-0.5">
-					<span
-						class="text-primary text-2xl font-semibold sm:text-3xl"
-						role="status"
-						aria-live="polite"
-					>
-						<AnimatedBalanceCounter
-							value={displayedTotalValue}
-							format={(amount) => balanceMoney.format(amount)}
-							class="font-semibold"
-						/>
-					</span>
-
-					{#if totalBalanceChange}
-						{@const change = totalBalanceChange}
-						{@const isPositive = change.amount > 0}
-						{@const isNegative = change.amount < 0}
+			<div
+				class="flex flex-1 items-center justify-between gap-4 px-5 py-4 sm:px-6 sm:py-5 {displayedInvestmentStats
+					? 'border-border border-b sm:border-r sm:border-b-0'
+					: ''}"
+			>
+				<div class="flex min-w-0 items-center gap-3">
+					<span class="text-muted-foreground shrink-0 text-sm font-medium">Total</span>
+					<div class="flex min-w-0 flex-col gap-0.5">
 						<span
-							class="flex items-center gap-1 text-sm font-semibold {isPositive
-								? 'text-income'
-								: isNegative
-									? 'text-debt'
-									: 'text-muted-foreground'}"
+							class="text-primary text-2xl font-semibold sm:text-3xl"
 							role="status"
 							aria-live="polite"
 						>
-							<svg
-								class="size-3 shrink-0"
-								viewBox="0 0 12 12"
-								aria-hidden="true"
-								fill="currentColor"
-							>
-								{#if isNegative}
-									<polygon points="6,8 1,3 11,3" />
-								{:else}
-									<polygon points="6,4 1,9 11,9" />
-								{/if}
-							</svg>
-							<span>
-								{balanceMoney.format(Math.abs(change.amount))}
-								{#if change.percent != null}
-									<span class="font-medium">
-										({isNegative ? '-' : ''}{percentFormat.format(Math.abs(change.percent))}%)
-									</span>
-								{/if}
-							</span>
+							<AnimatedBalanceCounter
+								value={displayedTotalValue}
+								format={(amount) => balanceMoney.format(amount)}
+								class="font-semibold"
+							/>
 						</span>
-					{/if}
+
+						{#if totalBalanceChange}
+							{@const change = totalBalanceChange}
+							{@const isPositive = change.amount > 0}
+							{@const isNegative = change.amount < 0}
+							<span
+								class="flex items-center gap-1 text-sm font-semibold {isPositive
+									? 'text-income'
+									: isNegative
+										? 'text-debt'
+										: 'text-muted-foreground'}"
+								role="status"
+								aria-live="polite"
+							>
+								<svg
+									class="size-3 shrink-0"
+									viewBox="0 0 12 12"
+									aria-hidden="true"
+									fill="currentColor"
+								>
+									{#if isNegative}
+										<polygon points="6,8 1,3 11,3" />
+									{:else}
+										<polygon points="6,4 1,9 11,9" />
+									{/if}
+								</svg>
+								<span>
+									{balanceMoney.format(Math.abs(change.amount))}
+									{#if change.percent != null}
+										<span class="font-medium">
+											({isNegative ? '-' : ''}{percentFormat.format(Math.abs(change.percent))}%)
+										</span>
+									{/if}
+								</span>
+							</span>
+						{/if}
+					</div>
 				</div>
+
+				{#if displayedInvestmentStats}
+					<div
+						class="flex shrink-0 flex-col items-end gap-2 text-end"
+						role="group"
+						aria-label="Contributions and earnings"
+					>
+						<div class="flex flex-col gap-0.5">
+							<span class="text-muted-foreground text-xs">Contributions</span>
+							<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
+								<AnimatedBalanceCounter
+									value={displayedInvestmentStats.contributions}
+									format={(amount) => balanceMoney.format(amount)}
+									class="font-semibold"
+								/>
+							</span>
+						</div>
+						<div class="flex flex-col gap-0.5">
+							<span class="text-muted-foreground text-xs">Earnings</span>
+							<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
+								<AnimatedBalanceCounter
+									value={displayedInvestmentStats.earnings}
+									format={(amount) => balanceMoney.format(amount)}
+									class="font-semibold"
+								/>
+							</span>
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			{#if totalOnly && categoryHeaderItems.length > 0}
