@@ -22,6 +22,7 @@ import {
 	formatChartAccountTypeLabel,
 	hasChartLabelOverride
 } from '$lib/server/plaid/plaid-account-label';
+import { getPersistedPlaidItemIdForLabel } from '$lib/server/plaid/plaid-item-registry';
 import type { PlaidConfig, PlaidLinkedItem } from '$data/api-config.types';
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -217,7 +218,7 @@ export function loadLatestBalancesFromDb(plaid: PlaidConfig): LatestBalancesFrom
 		byItemId[itemKey] = buildAccountBalanceHistory({
 			accounts: bankAccounts,
 			bankLabel: itemLabel,
-			itemId: item.itemId ?? null,
+			itemId: item.itemId ?? getPersistedPlaidItemIdForLabel(itemLabel),
 			itemIsDebt: isDebt,
 			useDummyData
 		});

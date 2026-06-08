@@ -178,3 +178,17 @@ export async function resolvePlaidItemIdForItem(
 	const registry = await ensurePlaidItemRegistry(plaid);
 	return registry.itemIdByAccessToken.get(item.accessToken) ?? null;
 }
+
+/** Reads a cached Plaid item_id for a label without calling the Plaid API. */
+export function getPersistedPlaidItemIdForLabel(label: string): string | null {
+	const normalizedLabel = label.trim();
+	const persistedLabels = loadPersistedItemLabels();
+
+	for (const [itemId, persistedLabel] of persistedLabels.entries()) {
+		if (persistedLabel === normalizedLabel) {
+			return itemId;
+		}
+	}
+
+	return null;
+}
