@@ -19,27 +19,6 @@ services:
       PORT: "3000"
       SQLITE_DB_PATH: ${SQLITE_DB_PATH:-/app/data/finance.sqlite}
       BALANCE_LOG_CRON_TOKEN: ${BALANCE_LOG_CRON_TOKEN:-}
-# Personal landing page — bind to localhost on the Pi; reach via Tailscale Serve or tailnet IP.
-# See docs/deploy-raspberry-pi.md
-
-services:
-  landing-page:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: landing-page:latest
-    container_name: landing-page
-    restart: unless-stopped
-    ports:
-      # Host port (left) defaults to 3001 — 3000 is often taken on a Pi. Override in .env: HOST_PORT=3000
-      # Tailscale Serve must target the same host port, e.g. http://127.0.0.1:3001
-      - "127.0.0.1:${HOST_PORT:-3001}:3000"
-    environment:
-      NODE_ENV: production
-      HOST: 0.0.0.0
-      PORT: "3000"
-      SQLITE_DB_PATH: ${SQLITE_DB_PATH:-/app/data/finance.sqlite}
-      BALANCE_LOG_CRON_TOKEN: ${BALANCE_LOG_CRON_TOKEN:-}
       # Optional: set in project `.env` when using Tailscale Serve (see .env.docker.example)
       ORIGIN: ${ORIGIN:-}
       # Optional: only for local webhook testing — never set in production
