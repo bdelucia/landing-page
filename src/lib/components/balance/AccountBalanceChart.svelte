@@ -255,7 +255,7 @@
 		return filteredChartData.at(-1)?.sortDate ?? null;
 	});
 
-	const displayedInvestmentStats = $derived.by(() => {
+	const displayedContributions = $derived.by(() => {
 		const timeline = detail.investmentContributionTimeline;
 		const sortDate = activeChartSortDate;
 
@@ -269,7 +269,7 @@
 			timeline,
 			firstRealPlaidDay,
 			hoveredChartPoint != null
-		);
+		).contributions;
 	});
 
 	const hoverDatePosition = $derived.by(() => {
@@ -344,7 +344,7 @@
 	{:else}
 		<div class="border-border flex flex-col items-stretch border-b sm:flex-row">
 			<div
-				class="flex flex-1 items-center justify-between gap-4 px-5 py-4 sm:px-6 sm:py-5 {displayedInvestmentStats
+				class="flex flex-1 items-center justify-between gap-4 px-5 py-4 sm:px-6 sm:py-5 {displayedContributions != null
 					? 'border-border border-b sm:border-r sm:border-b-0'
 					: ''}"
 			>
@@ -401,32 +401,16 @@
 					</div>
 				</div>
 
-				{#if displayedInvestmentStats}
-					<div
-						class="flex shrink-0 flex-col items-end gap-2 text-end"
-						role="group"
-						aria-label="Contributions and earnings"
-					>
-						<div class="flex flex-col gap-0.5">
-							<span class="text-muted-foreground text-xs">Contributions</span>
-							<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
-								<AnimatedBalanceCounter
-									value={displayedInvestmentStats.contributions}
-									format={(amount) => balanceMoney.format(amount)}
-									class="font-semibold"
-								/>
-							</span>
-						</div>
-						<div class="flex flex-col gap-0.5">
-							<span class="text-muted-foreground text-xs">Earnings</span>
-							<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
-								<AnimatedBalanceCounter
-									value={displayedInvestmentStats.earnings}
-									format={(amount) => balanceMoney.format(amount)}
-									class="font-semibold"
-								/>
-							</span>
-						</div>
+				{#if displayedContributions != null}
+					<div class="flex shrink-0 flex-col items-end gap-0.5 text-end" role="group" aria-label="Contributions">
+						<span class="text-muted-foreground text-xs">Contributions</span>
+						<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
+							<AnimatedBalanceCounter
+								value={displayedContributions}
+								format={(amount) => balanceMoney.format(amount)}
+								class="font-semibold"
+							/>
+						</span>
 					</div>
 				{/if}
 			</div>
