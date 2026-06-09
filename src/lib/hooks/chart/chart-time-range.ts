@@ -74,17 +74,21 @@ export function filterChartDataByRange<T extends { sortDate: string }>(
 	if (range === '1D') {
 		const today = currentChartDayKey();
 		const yesterday = addDaysToDayKey(today, -1);
-		const byDate = new Map(data.map((point) => [point.sortDate, point]));
-		const result: T[] = [];
-
-		for (const sortDate of [yesterday, today]) {
-			const point = byDate.get(sortDate);
-			if (point) {
-				result.push(point);
-			}
+		const sorted = [...data].sort((left, right) => left.sortDate.localeCompare(right.sortDate));
+		const todayPoint = sorted.find((point) => point.sortDate === today) ?? sorted.at(-1);
+		if (!todayPoint) {
+			return data.filter((point) => point.sortDate >= yesterday);
 		}
 
-		return result.length > 0 ? result : data.filter((point) => point.sortDate >= yesterday);
+		const yesterdayPoint =
+			sorted.find((point) => point.sortDate === yesterday) ??
+			sorted.filter((point) => point.sortDate < todayPoint.sortDate).at(-1);
+
+		if (yesterdayPoint && yesterdayPoint.sortDate !== todayPoint.sortDate) {
+			return [yesterdayPoint, todayPoint];
+		}
+
+		return [todayPoint];
 	}
 
 	const reference = data[data.length - 1].sortDate;

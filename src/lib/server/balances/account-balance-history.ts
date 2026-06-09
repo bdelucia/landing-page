@@ -11,8 +11,7 @@ import {
 	formatChartDayLabel,
 	isoInstantToDayKey,
 	iterDayKeysInRange,
-	parseSnapshotInstant,
-	addDaysToDayKey
+	parseSnapshotInstant
 } from '$lib/hooks/chart/chart-date';
 import { resolveScopedAccountIdsForItem } from '$lib/server/balances/snapshot-item-scope';
 import {
@@ -21,7 +20,6 @@ import {
 	getDatabase
 } from '$lib/server/db/database';
 import { loadInvestmentContributionTimeline } from '$lib/server/investments/investment-contributions';
-import { adjustInvestmentChartBalances } from '$lib/server/investments/investment-chart-balances';
 
 type SnapshotRow = {
 	snapshotTime: string;
@@ -155,11 +153,6 @@ function buildDailyChartPoints(
 		maxDayKey = todayKey;
 	}
 
-	const yesterdayKey = addDaysToDayKey(todayKey, -1);
-	if (minDayKey > yesterdayKey) {
-		minDayKey = yesterdayKey;
-	}
-
 	const accountIds = [...balanceByAccountDay.keys()];
 	const points: AccountBalanceChartPoint[] = [];
 
@@ -261,15 +254,11 @@ export function buildAccountBalanceHistory({
 		itemId,
 		tableName
 	});
-	let chartData = buildDailyChartPoints(snapshotRows, accounts, itemIsDebt);
+	const chartData = buildDailyChartPoints(snapshotRows, accounts, itemIsDebt);
 	const headerAccounts = accountsForChartHeader(accounts, snapshotRows);
 	const investmentContributionTimeline = isInvestingAccountLabel(bankLabel)
 		? (loadInvestmentContributionTimeline(bankLabel, useDummyData) ?? undefined)
 		: undefined;
-
-	if (investmentContributionTimeline) {
-		chartData = adjustInvestmentChartBalances(chartData, investmentContributionTimeline);
-	}
 
 	return {
 		accounts,

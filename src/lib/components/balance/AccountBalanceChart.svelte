@@ -6,7 +6,6 @@
 	} from '$lib/components/ui/chart/chart-utils';
 	import type { CategoryBalanceSummary } from '$lib/hooks/finances/account-balances';
 	import {
-		balanceAdjustingForPendingDeposit,
 		investmentStatsFromTimeline,
 		isPreSnapshotSyntheticDay,
 		preSnapshotSyntheticBalance
@@ -27,7 +26,7 @@
 		filterChartDataByRange,
 		type ChartTimeRange
 	} from '$lib/hooks/chart/chart-time-range';
-	import { formatChartDayLabel } from '$lib/hooks/chart/chart-date';
+	import { currentChartDayKey, formatChartDayLabel } from '$lib/hooks/chart/chart-date';
 	import AnimatedBalanceCounter from '$lib/components/balance/AnimatedBalanceCounter.svelte';
 	import { LineChart } from 'layerchart';
 
@@ -130,15 +129,6 @@
 		}))
 	);
 
-	const chartTotalBySortDate = $derived(
-		new Map(
-			totalChartData.map((point) => [
-				point.sortDate,
-				typeof point.total === 'number' ? point.total : chartPointTotal(point)
-			])
-		)
-	);
-
 	const chartDataForDisplay = $derived(
 		activeChart === 'total' ? totalChartData : filteredChartData
 	);
@@ -205,38 +195,24 @@
 
 	const displayedTotalValue = $derived.by(() => {
 		const timeline = detail.investmentContributionTimeline;
+		const todayKey = currentChartDayKey();
 
 		if (hoveredChartPoint?.sortDate && timeline && isPreSnapshotSyntheticDay(hoveredChartPoint.sortDate, firstRealPlaidDay)) {
 			return preSnapshotSyntheticBalance(timeline);
 		}
 
-		if (hoveredChartPoint) {
-			let value: number;
-			if (activeChart === 'total') {
-				value = chartPointTotal(hoveredChartPoint);
-			} else {
-				const key = activeChart;
-				const seriesValue = hoveredChartPoint[key];
-				value = typeof seriesValue === 'number' ? seriesValue : totalBalance;
-			}
-
-			if (
-				timeline &&
-				typeof hoveredChartPoint.sortDate === 'string' &&
-				activeChart === 'total'
-			) {
-				value = balanceAdjustingForPendingDeposit(
-					value,
-					hoveredChartPoint.sortDate,
-					timeline,
-					chartTotalBySortDate
-				);
-			}
-
-			return value;
+		// Live Plaid balance for today; chart snapshots for historical days.
+		if (!hoveredChartPoint || hoveredChartPoint.sortDate === todayKey) {
+			return totalBalance;
 		}
 
-		return totalBalance;
+		if (activeChart === 'total') {
+			return chartPointTotal(hoveredChartPoint);
+		}
+
+		const key = activeChart;
+		const seriesValue = hoveredChartPoint[key];
+		return typeof seriesValue === 'number' ? seriesValue : totalBalance;
 	});
 
 	const activeChartSortDate = $derived.by(() => {
