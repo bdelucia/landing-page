@@ -1,5 +1,4 @@
 import {
-	accountSeriesKey,
 	chartPointTotal,
 	type AccountBalanceChartPoint
 } from '$lib/hooks/finances/bank-accounts';
