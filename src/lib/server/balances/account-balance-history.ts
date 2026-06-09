@@ -122,16 +122,6 @@ function signedBalance(balance: number, isDebt: boolean): number {
 	return isDebt ? -Math.abs(balance) : balance;
 }
 
-function collectSnapshotSortDates(rows: SnapshotRow[]): string[] {
-	const dates = new Set<string>();
-
-	for (const row of rows) {
-		dates.add(toDayKey(row.snapshotTime));
-	}
-
-	return [...dates].sort();
-}
-
 function buildDailyChartPoints(
 	rows: SnapshotRow[],
 	accounts: BankAccountItem[],
@@ -258,10 +248,8 @@ export function buildAccountBalanceHistory({
 		itemId,
 		tableName
 	});
-	const reducedRows = latestSnapshotPerAccountDay(snapshotRows);
 	const chartData = buildDailyChartPoints(snapshotRows, accounts, itemIsDebt);
 	const headerAccounts = accountsForChartHeader(accounts, snapshotRows);
-	const balanceSnapshotSortDates = collectSnapshotSortDates(reducedRows);
 
 	return {
 		accounts,
@@ -269,7 +257,6 @@ export function buildAccountBalanceHistory({
 		chartData,
 		chartConfig,
 		isDummyData: useDummyData,
-		balanceSnapshotSortDates,
 		investmentContributionTimeline: isInvestingAccountLabel(bankLabel)
 			? (loadInvestmentContributionTimeline(bankLabel, useDummyData) ?? undefined)
 			: undefined

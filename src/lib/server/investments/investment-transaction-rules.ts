@@ -151,6 +151,11 @@ function contributionDeltaFromAmount(amount: number): number {
 	return roundMoney(-amount);
 }
 
+/** Fidelity payroll rows are always money in — Plaid amount sign is inconsistent. */
+function fidelityContributionDelta(transaction: InvestmentTransaction): number {
+	return absAmount(transaction.amount);
+}
+
 /**
  * Decide how a Plaid investment transaction affects tracked contributions.
  * Earnings are always derived as balance minus contributions.
@@ -168,7 +173,7 @@ export function classifyInvestmentTransaction(
 
 	if (label === 'Fidelity') {
 		if (isFidelityContributionMovement(transaction)) {
-			return { kind: 'contribution', delta: contributionDeltaFromAmount(transaction.amount) };
+			return { kind: 'contribution', delta: fidelityContributionDelta(transaction) };
 		}
 
 		return { kind: 'ignore', reason: 'in-account investment activity' };

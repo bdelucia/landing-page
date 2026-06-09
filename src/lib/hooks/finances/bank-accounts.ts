@@ -34,8 +34,6 @@ export type BankAccountDetail = {
 	isDummyData: boolean;
 	/** Deposit/withdrawal history for hoverable contributions on investment charts. */
 	investmentContributionTimeline?: InvestmentContributionTimeline;
-	/** Calendar days with a real balance snapshot (not forward-filled). */
-	balanceSnapshotSortDates?: string[];
 };
 
 export type BankAccountDetailsByItem = Record<string, BankAccountDetail>;

@@ -15,42 +15,6 @@ export function isPreSnapshotSyntheticDay(
 	return firstRealPlaidSortDate != null && sortDate < firstRealPlaidSortDate;
 }
 
-/** Latest day with a real Plaid balance snapshot on or before `sortDate`. */
-export function latestSnapshotSortDateOnOrBefore(
-	sortDate: string,
-	snapshotSortDates: readonly string[]
-): string | null {
-	let latest: string | null = null;
-
-	for (const snapshotDate of snapshotSortDates) {
-		if (snapshotDate <= sortDate && (latest == null || snapshotDate > latest)) {
-			latest = snapshotDate;
-		}
-	}
-
-	return latest;
-}
-
-/**
- * When scrubbing the chart, only advance contributions through `sortDate` if that
- * day has a real balance snapshot. Forward-filled days keep the last snapshot's
- * contribution total so market-only days do not shift contributions.
- */
-export function contributionsDateForHover(
-	sortDate: string,
-	snapshotSortDates: readonly string[]
-): string {
-	if (snapshotSortDates.length === 0) {
-		return sortDate;
-	}
-
-	if (snapshotSortDates.includes(sortDate)) {
-		return sortDate;
-	}
-
-	return latestSnapshotSortDateOnOrBefore(sortDate, snapshotSortDates) ?? sortDate;
-}
-
 export function latestContributionsFromTimeline(
 	timeline: InvestmentContributionTimeline
 ): number {
@@ -84,7 +48,6 @@ export function investmentStatsFromTimeline(
 	sortDate: string,
 	timeline: InvestmentContributionTimeline,
 	firstRealPlaidSortDate: string | null = null,
-	snapshotSortDates: readonly string[] = [],
 	isHistoricalHover = false
 ): { contributions: number; earnings: number } {
 	if (isPreSnapshotSyntheticDay(sortDate, firstRealPlaidSortDate)) {
@@ -95,7 +58,7 @@ export function investmentStatsFromTimeline(
 	}
 
 	const contributions = isHistoricalHover
-		? contributionsAsOf(contributionsDateForHover(sortDate, snapshotSortDates), timeline)
+		? contributionsAsOf(sortDate, timeline)
 		: latestContributionsFromTimeline(timeline);
 	const earnings = Math.round((balance - contributions) * 100) / 100;
 

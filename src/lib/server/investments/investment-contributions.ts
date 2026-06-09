@@ -14,6 +14,7 @@ import {
 	contributionsAsOf,
 	type InvestmentContributionTimeline
 } from '$lib/hooks/finances/investment-contribution-timeline';
+import { isoInstantToDayKey } from '$lib/hooks/chart/chart-date';
 import {
 	readInvestmentBaselineAmount,
 	resolveInvestmentTrackingStartDate,
@@ -213,9 +214,11 @@ async function syncContributionsForItem(plaid: PlaidConfig, item: PlaidLinkedIte
 
 	for (const transaction of transactions) {
 		const decision = classifyInvestmentTransaction(itemLabel, transaction, reinvestmentPairs);
-		const contributionDelta = decision.kind === 'contribution' ? decision.delta : 0;
+		const rawDelta = decision.kind === 'contribution' ? decision.delta : 0;
+		// Contributions are cumulative deposits only — never subtract on re-sync noise.
+		const contributionDelta = rawDelta > 0 ? rawDelta : 0;
 
-		if (decision.kind === 'contribution' && contributionDelta !== 0) {
+		if (contributionDelta !== 0) {
 			applied += 1;
 		}
 
@@ -270,7 +273,7 @@ function upsertInvestmentHistory(
 }
 
 function recordInvestmentHistoryForRows(rows: LatestSnapshotRow[], snapshotTime: string): void {
-	const historyDate = snapshotTime.slice(0, 10);
+	const historyDate = isoInstantToDayKey(snapshotTime);
 	const timelinesByLabel = new Map<string, InvestmentContributionTimeline>();
 
 	for (const row of rows) {
@@ -440,6 +443,10 @@ function buildContributionTimelineSteps(
 		left.localeCompare(right)
 	)) {
 		if (trackingStartDate && sortDate <= trackingStartDate) {
+			continue;
+		}
+
+		if (delta <= 0) {
 			continue;
 		}
 

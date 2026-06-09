@@ -1,3 +1,4 @@
+import { isoInstantToDayKey } from '$lib/hooks/chart/chart-date';
 import {
 	ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE,
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
@@ -8,24 +9,30 @@ type SnapshotTableName =
 	| typeof ACCOUNT_BALANCE_SNAPSHOTS_TABLE
 	| typeof ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE;
 
-/** Earliest balance snapshot day (YYYY-MM-DD) stored for a linked item label. */
+/** Earliest balance snapshot day (YYYY-MM-DD, Phoenix) stored for a linked item label. */
 export function fetchEarliestSnapshotDate(
 	itemLabel: string,
 	tableName: SnapshotTableName = ACCOUNT_BALANCE_SNAPSHOTS_TABLE
 ): string | null {
 	const db = getDatabase();
-	const row = db
+	const rows = db
 		.prepare(
 			`
-			SELECT MIN(substr(snapshot_time, 1, 10)) AS earliestDate
+			SELECT snapshot_time AS snapshotTime
 			FROM ${tableName}
 			WHERE plaid_item_label = ?
+			ORDER BY snapshot_time ASC
+			LIMIT 1
 		`
 		)
-		.get(itemLabel.trim()) as { earliestDate: string | null } | undefined;
+		.all(itemLabel.trim()) as Array<{ snapshotTime: string }>;
 
-	const earliestDate = row?.earliestDate?.trim();
-	return earliestDate && /^\d{4}-\d{2}-\d{2}$/.test(earliestDate) ? earliestDate : null;
+	const snapshotTime = rows[0]?.snapshotTime?.trim();
+	if (!snapshotTime) {
+		return null;
+	}
+
+	return isoInstantToDayKey(snapshotTime);
 }
 
 export function snapshotTableForEnvironment(useDummyData: boolean): SnapshotTableName {
