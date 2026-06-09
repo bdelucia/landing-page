@@ -1,3 +1,5 @@
+import { addDaysToDayKey, currentChartDayKey } from '$lib/hooks/chart/chart-date';
+
 export type InvestmentContributionTimeline = {
 	/** Contributions from secrets — total before the earliest balance snapshot in SQLite. */
 	baseline: number;
@@ -41,6 +43,51 @@ export function contributionsAsOf(
 	}
 
 	return contributions;
+}
+
+/** Net new contributions recorded on a single calendar day. */
+export function contributionDeltaOnDay(
+	sortDate: string,
+	timeline: InvestmentContributionTimeline
+): number {
+	const priorSortDate = addDaysToDayKey(sortDate, -1);
+	return (
+		Math.round(
+			(contributionsAsOf(sortDate, timeline) - contributionsAsOf(priorSortDate, timeline)) * 100
+		) / 100
+	);
+}
+
+/**
+ * Balance to show for an investment account on a chart day.
+ * Today uses the live Plaid balance. Historical days use the snapshot balance, plus
+ * any same-day deposit when the snapshot has not caught up yet.
+ */
+export function investmentDisplayBalanceForDay(
+	sortDate: string,
+	snapshotChartTotal: number,
+	timeline: InvestmentContributionTimeline,
+	snapshotTotalByDay: ReadonlyMap<string, number>,
+	liveBalance: number,
+	todayKey: string = currentChartDayKey()
+): number {
+	if (sortDate === todayKey) {
+		return liveBalance;
+	}
+
+	const priorSortDate = addDaysToDayKey(sortDate, -1);
+	const priorSnapshotTotal = snapshotTotalByDay.get(priorSortDate);
+	const contributionDelta = contributionDeltaOnDay(sortDate, timeline);
+
+	if (
+		contributionDelta > 0 &&
+		priorSnapshotTotal != null &&
+		Math.abs(snapshotChartTotal - priorSnapshotTotal) < 0.01
+	) {
+		return Math.round((snapshotChartTotal + contributionDelta) * 100) / 100;
+	}
+
+	return snapshotChartTotal;
 }
 
 export function investmentStatsFromTimeline(
