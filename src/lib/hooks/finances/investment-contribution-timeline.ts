@@ -1,3 +1,5 @@
+import type { ChartBalanceChange } from '$lib/hooks/chart/chart-time-range';
+import { chartBalanceChange } from '$lib/hooks/chart/chart-time-range';
 import { addDaysToDayKey, currentChartDayKey } from '$lib/hooks/chart/chart-date';
 
 export type InvestmentContributionTimeline = {
@@ -90,6 +92,20 @@ export function investmentDisplayBalanceForDay(
 	return snapshotChartTotal;
 }
 
+/** Earnings (balance minus contributions) for a chart day. */
+export function earningsAsOf(
+	sortDate: string,
+	displayBalance: number,
+	timeline: InvestmentContributionTimeline,
+	firstRealPlaidSortDate: string | null
+): number {
+	if (isPreSnapshotSyntheticDay(sortDate, firstRealPlaidSortDate)) {
+		return 0;
+	}
+
+	return Math.round((displayBalance - contributionsAsOf(sortDate, timeline)) * 100) / 100;
+}
+
 export function investmentStatsFromTimeline(
 	balance: number,
 	sortDate: string,
@@ -97,6 +113,10 @@ export function investmentStatsFromTimeline(
 	firstRealPlaidSortDate: string | null = null,
 	isHistoricalHover = false
 ): { contributions: number; earnings: number } {
+	const contributions = isHistoricalHover
+		? contributionsAsOf(sortDate, timeline)
+		: latestContributionsFromTimeline(timeline);
+
 	if (isPreSnapshotSyntheticDay(sortDate, firstRealPlaidSortDate)) {
 		return {
 			contributions: timeline.baseline,
@@ -104,12 +124,23 @@ export function investmentStatsFromTimeline(
 		};
 	}
 
-	const contributions = isHistoricalHover
-		? contributionsAsOf(sortDate, timeline)
-		: latestContributionsFromTimeline(timeline);
-	const earnings = Math.round((balance - contributions) * 100) / 100;
+	const earnings = earningsAsOf(sortDate, balance, timeline, firstRealPlaidSortDate);
 
 	return { contributions, earnings };
+}
+
+/** Balance change for an investment chart range — contributions excluded, earnings only. */
+export function investmentEarningsChange<T extends { sortDate: string }>(
+	data: T[],
+	getDisplayBalance: (point: T) => number,
+	timeline: InvestmentContributionTimeline,
+	firstRealPlaidSortDate: string | null,
+	endIndex?: number
+): ChartBalanceChange | null {
+	const getEarnings = (point: T) =>
+		earningsAsOf(point.sortDate, getDisplayBalance(point), timeline, firstRealPlaidSortDate);
+
+	return chartBalanceChange(data, getEarnings, endIndex);
 }
 
 export function initialContributionAmount(timeline: InvestmentContributionTimeline): number {

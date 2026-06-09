@@ -7,6 +7,7 @@
 	import type { CategoryBalanceSummary } from '$lib/hooks/finances/account-balances';
 	import {
 		investmentDisplayBalanceForDay,
+		investmentEarningsChange,
 		investmentStatsFromTimeline,
 		isPreSnapshotSyntheticDay,
 		preSnapshotSyntheticBalance
@@ -198,8 +199,33 @@
 	});
 
 	const totalBalanceChange = $derived.by(() => {
+		const timeline = detail.investmentContributionTimeline;
 		const getValue = (point: (typeof totalChartData)[number]) =>
 			typeof point.total === 'number' ? point.total : chartPointTotal(point);
+
+		if (timeline) {
+			if (hoveredChartPoint) {
+				const endIndex = totalChartData.findIndex(
+					(point) => point.sortDate === hoveredChartPoint.sortDate
+				);
+				if (endIndex >= 0) {
+					return investmentEarningsChange(
+						totalChartData,
+						getValue,
+						timeline,
+						firstRealPlaidDay,
+						endIndex
+					);
+				}
+			}
+
+			return investmentEarningsChange(
+				totalChartData,
+				getValue,
+				timeline,
+				firstRealPlaidDay
+			);
+		}
 
 		if (hoveredChartPoint) {
 			const endIndex = totalChartData.findIndex(
