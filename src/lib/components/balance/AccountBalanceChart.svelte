@@ -6,6 +6,7 @@
 	} from '$lib/components/ui/chart/chart-utils';
 	import type { CategoryBalanceSummary } from '$lib/hooks/finances/account-balances';
 	import {
+		balanceAdjustingForPendingDeposit,
 		investmentStatsFromTimeline,
 		isPreSnapshotSyntheticDay,
 		preSnapshotSyntheticBalance
@@ -129,6 +130,15 @@
 		}))
 	);
 
+	const chartTotalBySortDate = $derived(
+		new Map(
+			totalChartData.map((point) => [
+				point.sortDate,
+				typeof point.total === 'number' ? point.total : chartPointTotal(point)
+			])
+		)
+	);
+
 	const chartDataForDisplay = $derived(
 		activeChart === 'total' ? totalChartData : filteredChartData
 	);
@@ -201,13 +211,29 @@
 		}
 
 		if (hoveredChartPoint) {
+			let value: number;
 			if (activeChart === 'total') {
-				return chartPointTotal(hoveredChartPoint);
+				value = chartPointTotal(hoveredChartPoint);
+			} else {
+				const key = activeChart;
+				const seriesValue = hoveredChartPoint[key];
+				value = typeof seriesValue === 'number' ? seriesValue : totalBalance;
 			}
 
-			const key = activeChart;
-			const value = hoveredChartPoint[key];
-			return typeof value === 'number' ? value : totalBalance;
+			if (
+				timeline &&
+				typeof hoveredChartPoint.sortDate === 'string' &&
+				activeChart === 'total'
+			) {
+				value = balanceAdjustingForPendingDeposit(
+					value,
+					hoveredChartPoint.sortDate,
+					timeline,
+					chartTotalBySortDate
+				);
+			}
+
+			return value;
 		}
 
 		return totalBalance;

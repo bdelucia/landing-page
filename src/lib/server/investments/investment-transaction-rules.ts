@@ -61,26 +61,43 @@ export function isBankCashMovement(transaction: InvestmentTransaction): boolean 
 }
 
 /**
- * Fidelity 401k payroll deposits arrive as `cash/withdrawal` rows named
- * "... - contribution". Only those explicit payroll rows count — not dividends,
- * distributions, or other cash activity.
+ * Fidelity splits each payroll deposit across multiple funds. Every fund line is
+ * named "... - contribution". DFA fund rows include a security_id; FID rows do not.
  */
 export function isFidelityContributionMovement(transaction: InvestmentTransaction): boolean {
-	if (hasSecurity(transaction)) {
-		return false;
-	}
-
 	const name = normalizedText(transaction.name);
 	if (!name.includes('contribution')) {
 		return false;
 	}
 
-	return (
-		transaction.type === 'cash' &&
-		(transaction.subtype === 'withdrawal' ||
-			transaction.subtype === 'contribution' ||
-			transaction.subtype === 'deposit')
-	);
+	return transaction.type === 'cash' && transaction.subtype === 'withdrawal';
+}
+
+/** Dividends, fees, and internal gain/loss lines are earnings activity — not deposits. */
+export function isFidelityEarningsActivity(transaction: InvestmentTransaction): boolean {
+	const name = normalizedText(transaction.name);
+
+	if (isDividendSubtype(transaction.subtype)) {
+		return true;
+	}
+
+	if (name.includes('dividend') || name.includes('interest')) {
+		return true;
+	}
+
+	if (name.includes('fees') || name.includes('realizedgainloss')) {
+		return true;
+	}
+
+	if (transaction.type === 'fee') {
+		return true;
+	}
+
+	if (transaction.subtype === 'sell' || transaction.subtype === 'buy') {
+		return true;
+	}
+
+	return false;
 }
 
 function isDividendSubtype(subtype: string | undefined): boolean {
@@ -172,6 +189,10 @@ export function classifyInvestmentTransaction(
 	const label = itemLabel.trim();
 
 	if (label === 'Fidelity') {
+		if (isFidelityEarningsActivity(transaction)) {
+			return { kind: 'ignore', reason: 'earnings activity' };
+		}
+
 		if (isFidelityContributionMovement(transaction)) {
 			return { kind: 'contribution', delta: fidelityContributionDelta(transaction) };
 		}
