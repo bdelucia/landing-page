@@ -140,7 +140,14 @@ export function investmentEarningsChange<T extends { sortDate: string }>(
 	const getEarnings = (point: T) =>
 		earningsAsOf(point.sortDate, getDisplayBalance(point), timeline, firstRealPlaidSortDate);
 
-	return chartBalanceChange(data, getEarnings, endIndex);
+	const change = chartBalanceChange(data, getEarnings, endIndex);
+	if (!change) return null;
+
+	const startBalance = getDisplayBalance(data[0]);
+	const percent =
+		startBalance !== 0 ? (change.amount / Math.abs(startBalance)) * 100 : null;
+
+	return { ...change, percent };
 }
 
 export function initialContributionAmount(timeline: InvestmentContributionTimeline): number {
