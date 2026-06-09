@@ -61,23 +61,26 @@ export function isBankCashMovement(transaction: InvestmentTransaction): boolean 
 }
 
 /**
- * Fidelity 401k payroll deposits often arrive as `cash/withdrawal` rows named
- * "... - contribution". Internal fund moves can also use `distribution` and must
- * not reduce tracked contributions.
+ * Fidelity 401k payroll deposits arrive as `cash/withdrawal` rows named
+ * "... - contribution". Only those explicit payroll rows count — not dividends,
+ * distributions, or other cash activity.
  */
 export function isFidelityContributionMovement(transaction: InvestmentTransaction): boolean {
-	const subtype = transaction.subtype;
+	if (hasSecurity(transaction)) {
+		return false;
+	}
+
 	const name = normalizedText(transaction.name);
-
-	if (subtype === 'contribution' || subtype === 'deposit') {
-		return true;
+	if (!name.includes('contribution')) {
+		return false;
 	}
 
-	if (subtype === 'withdrawal') {
-		return name.includes('contribution') || transaction.amount < 0;
-	}
-
-	return false;
+	return (
+		transaction.type === 'cash' &&
+		(transaction.subtype === 'withdrawal' ||
+			transaction.subtype === 'contribution' ||
+			transaction.subtype === 'deposit')
+	);
 }
 
 function isDividendSubtype(subtype: string | undefined): boolean {

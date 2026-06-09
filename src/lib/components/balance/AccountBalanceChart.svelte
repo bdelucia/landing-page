@@ -234,7 +234,8 @@
 			sortDate,
 			timeline,
 			firstRealPlaidDay,
-			detail.balanceSnapshotSortDates ?? []
+			detail.balanceSnapshotSortDates ?? [],
+			hoveredChartPoint != null
 		);
 	});
 

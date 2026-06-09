@@ -31,6 +31,32 @@ export function latestSnapshotSortDateOnOrBefore(
 	return latest;
 }
 
+/**
+ * When scrubbing the chart, only advance contributions through `sortDate` if that
+ * day has a real balance snapshot. Forward-filled days keep the last snapshot's
+ * contribution total so market-only days do not shift contributions.
+ */
+export function contributionsDateForHover(
+	sortDate: string,
+	snapshotSortDates: readonly string[]
+): string {
+	if (snapshotSortDates.length === 0) {
+		return sortDate;
+	}
+
+	if (snapshotSortDates.includes(sortDate)) {
+		return sortDate;
+	}
+
+	return latestSnapshotSortDateOnOrBefore(sortDate, snapshotSortDates) ?? sortDate;
+}
+
+export function latestContributionsFromTimeline(
+	timeline: InvestmentContributionTimeline
+): number {
+	return timeline.steps.at(-1)?.contributions ?? timeline.baseline;
+}
+
 export function contributionsAsOf(
 	sortDate: string,
 	timeline: InvestmentContributionTimeline
@@ -58,7 +84,8 @@ export function investmentStatsFromTimeline(
 	sortDate: string,
 	timeline: InvestmentContributionTimeline,
 	firstRealPlaidSortDate: string | null = null,
-	snapshotSortDates: readonly string[] = []
+	snapshotSortDates: readonly string[] = [],
+	isHistoricalHover = false
 ): { contributions: number; earnings: number } {
 	if (isPreSnapshotSyntheticDay(sortDate, firstRealPlaidSortDate)) {
 		return {
@@ -67,11 +94,9 @@ export function investmentStatsFromTimeline(
 		};
 	}
 
-	const contributionsDate =
-		snapshotSortDates.length > 0
-			? (latestSnapshotSortDateOnOrBefore(sortDate, snapshotSortDates) ?? sortDate)
-			: sortDate;
-	const contributions = contributionsAsOf(contributionsDate, timeline);
+	const contributions = isHistoricalHover
+		? contributionsAsOf(contributionsDateForHover(sortDate, snapshotSortDates), timeline)
+		: latestContributionsFromTimeline(timeline);
 	const earnings = Math.round((balance - contributions) * 100) / 100;
 
 	return { contributions, earnings };
