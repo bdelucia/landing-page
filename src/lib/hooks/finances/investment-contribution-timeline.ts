@@ -15,6 +15,22 @@ export function isPreSnapshotSyntheticDay(
 	return firstRealPlaidSortDate != null && sortDate < firstRealPlaidSortDate;
 }
 
+/** Latest day with a real Plaid balance snapshot on or before `sortDate`. */
+export function latestSnapshotSortDateOnOrBefore(
+	sortDate: string,
+	snapshotSortDates: readonly string[]
+): string | null {
+	let latest: string | null = null;
+
+	for (const snapshotDate of snapshotSortDates) {
+		if (snapshotDate <= sortDate && (latest == null || snapshotDate > latest)) {
+			latest = snapshotDate;
+		}
+	}
+
+	return latest;
+}
+
 export function contributionsAsOf(
 	sortDate: string,
 	timeline: InvestmentContributionTimeline
@@ -41,7 +57,8 @@ export function investmentStatsFromTimeline(
 	balance: number,
 	sortDate: string,
 	timeline: InvestmentContributionTimeline,
-	firstRealPlaidSortDate: string | null = null
+	firstRealPlaidSortDate: string | null = null,
+	snapshotSortDates: readonly string[] = []
 ): { contributions: number; earnings: number } {
 	if (isPreSnapshotSyntheticDay(sortDate, firstRealPlaidSortDate)) {
 		return {
@@ -50,7 +67,11 @@ export function investmentStatsFromTimeline(
 		};
 	}
 
-	const contributions = contributionsAsOf(sortDate, timeline);
+	const contributionsDate =
+		snapshotSortDates.length > 0
+			? (latestSnapshotSortDateOnOrBefore(sortDate, snapshotSortDates) ?? sortDate)
+			: sortDate;
+	const contributions = contributionsAsOf(contributionsDate, timeline);
 	const earnings = Math.round((balance - contributions) * 100) / 100;
 
 	return { contributions, earnings };

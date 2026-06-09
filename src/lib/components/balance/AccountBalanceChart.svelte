@@ -233,7 +233,8 @@
 			displayedTotalValue,
 			sortDate,
 			timeline,
-			firstRealPlaidDay
+			firstRealPlaidDay,
+			detail.balanceSnapshotSortDates ?? []
 		);
 	});
 

@@ -45,12 +45,9 @@ function isCashMovementSubtype(subtype: string | undefined): boolean {
 	return CASH_MOVEMENT_SUBTYPES.has(subtype);
 }
 
-const FIDELITY_CONTRIBUTION_SUBTYPES = new Set([
-	'contribution',
-	'deposit',
-	'withdrawal',
-	'distribution'
-]);
+function normalizedText(value: string | null | undefined): string {
+	return (value ?? '').toLowerCase();
+}
 
 /** External cash in/out — no linked security (e.g. bank transfer). */
 export function isBankCashMovement(transaction: InvestmentTransaction): boolean {
@@ -63,9 +60,24 @@ export function isBankCashMovement(transaction: InvestmentTransaction): boolean 
 	return isCashMovementSubtype(transaction.subtype);
 }
 
-/** Fidelity payroll deposits and explicit cash in/out only — not fees or fund transfers. */
+/**
+ * Fidelity 401k payroll deposits often arrive as `cash/withdrawal` rows named
+ * "... - contribution". Internal fund moves can also use `distribution` and must
+ * not reduce tracked contributions.
+ */
 export function isFidelityContributionMovement(transaction: InvestmentTransaction): boolean {
-	return FIDELITY_CONTRIBUTION_SUBTYPES.has(transaction.subtype);
+	const subtype = transaction.subtype;
+	const name = normalizedText(transaction.name);
+
+	if (subtype === 'contribution' || subtype === 'deposit') {
+		return true;
+	}
+
+	if (subtype === 'withdrawal') {
+		return name.includes('contribution') || transaction.amount < 0;
+	}
+
+	return false;
 }
 
 function isDividendSubtype(subtype: string | undefined): boolean {
