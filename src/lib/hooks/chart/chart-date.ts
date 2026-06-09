@@ -33,6 +33,16 @@ export function isoInstantToDayKey(isoInstant: string, timeZone = CHART_TIME_ZON
 	}).format(instant);
 }
 
+/** Today's calendar day (YYYY-MM-DD) in the chart timezone. */
+export function currentChartDayKey(timeZone = CHART_TIME_ZONE): string {
+	return new Intl.DateTimeFormat('en-CA', {
+		timeZone,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit'
+	}).format(new Date());
+}
+
 /** Short label for a chart day key, e.g. "Jun 7". */
 export function formatChartDayLabel(dayKey: string, includeYear = false): string {
 	const [year, month, day] = dayKey.split('-').map((part) => Number.parseInt(part, 10));

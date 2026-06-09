@@ -65,6 +65,10 @@ export function padInvestmentChartDataForRange(
 	timeline: InvestmentContributionTimeline,
 	accountIds: string[]
 ): AccountBalanceChartPoint[] {
+	if (range === '1D') {
+		return rangeFilteredData;
+	}
+
 	const earliestRealSortDate = firstRealPlaidSortDate(fullChartData);
 	if (!earliestRealSortDate) {
 		return rangeFilteredData;

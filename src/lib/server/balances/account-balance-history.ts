@@ -7,10 +7,12 @@ import {
 } from '$lib/hooks/finances/bank-accounts';
 import { chartColorForAccount, type ChartConfig } from '$lib/components/ui/chart/chart-utils';
 import {
+	currentChartDayKey,
 	formatChartDayLabel,
 	isoInstantToDayKey,
 	iterDayKeysInRange,
-	parseSnapshotInstant
+	parseSnapshotInstant,
+	addDaysToDayKey
 } from '$lib/hooks/chart/chart-date';
 import { resolveScopedAccountIdsForItem } from '$lib/server/balances/snapshot-item-scope';
 import {
@@ -19,6 +21,7 @@ import {
 	getDatabase
 } from '$lib/server/db/database';
 import { loadInvestmentContributionTimeline } from '$lib/server/investments/investment-contributions';
+import { adjustInvestmentChartBalances } from '$lib/server/investments/investment-chart-balances';
 
 type SnapshotRow = {
 	snapshotTime: string;
@@ -147,6 +150,16 @@ function buildDailyChartPoints(
 		balanceByAccountDay.set(row.accountId, accountDays);
 	}
 
+	const todayKey = currentChartDayKey();
+	if (todayKey > maxDayKey) {
+		maxDayKey = todayKey;
+	}
+
+	const yesterdayKey = addDaysToDayKey(todayKey, -1);
+	if (minDayKey > yesterdayKey) {
+		minDayKey = yesterdayKey;
+	}
+
 	const accountIds = [...balanceByAccountDay.keys()];
 	const points: AccountBalanceChartPoint[] = [];
 
@@ -248,8 +261,15 @@ export function buildAccountBalanceHistory({
 		itemId,
 		tableName
 	});
-	const chartData = buildDailyChartPoints(snapshotRows, accounts, itemIsDebt);
+	let chartData = buildDailyChartPoints(snapshotRows, accounts, itemIsDebt);
 	const headerAccounts = accountsForChartHeader(accounts, snapshotRows);
+	const investmentContributionTimeline = isInvestingAccountLabel(bankLabel)
+		? (loadInvestmentContributionTimeline(bankLabel, useDummyData) ?? undefined)
+		: undefined;
+
+	if (investmentContributionTimeline) {
+		chartData = adjustInvestmentChartBalances(chartData, investmentContributionTimeline);
+	}
 
 	return {
 		accounts,
@@ -257,8 +277,6 @@ export function buildAccountBalanceHistory({
 		chartData,
 		chartConfig,
 		isDummyData: useDummyData,
-		investmentContributionTimeline: isInvestingAccountLabel(bankLabel)
-			? (loadInvestmentContributionTimeline(bankLabel, useDummyData) ?? undefined)
-			: undefined
+		investmentContributionTimeline
 	};
 }

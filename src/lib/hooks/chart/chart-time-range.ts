@@ -1,4 +1,9 @@
-import { formatChartDayKey, parseChartDayKey } from '$lib/hooks/chart/chart-date';
+import {
+	addDaysToDayKey,
+	currentChartDayKey,
+	formatChartDayKey,
+	parseChartDayKey
+} from '$lib/hooks/chart/chart-date';
 
 export type ChartTimeRange = '1D' | '1W' | '1M' | '3M' | '1Y' | 'YTD' | 'ALL';
 
@@ -65,6 +70,22 @@ export function filterChartDataByRange<T extends { sortDate: string }>(
 	range: ChartTimeRange
 ): T[] {
 	if (data.length === 0 || range === 'ALL') return data;
+
+	if (range === '1D') {
+		const today = currentChartDayKey();
+		const yesterday = addDaysToDayKey(today, -1);
+		const byDate = new Map(data.map((point) => [point.sortDate, point]));
+		const result: T[] = [];
+
+		for (const sortDate of [yesterday, today]) {
+			const point = byDate.get(sortDate);
+			if (point) {
+				result.push(point);
+			}
+		}
+
+		return result.length > 0 ? result : data.filter((point) => point.sortDate >= yesterday);
+	}
 
 	const reference = data[data.length - 1].sortDate;
 	const cutoff = cutoffDateForRange(range, reference);
