@@ -4,7 +4,10 @@
 	import { getWelcomeMessage } from '$lib/hooks/greeting/time-of-day-greeting';
 	import { Input, InputIcon, InputSubmit } from '$lib/components/input/index.js';
 	import QuickLink from '$lib/components/quick-links/QuickLink.svelte';
-	import TransactionList from '$lib/components/transactions/TransactionList.svelte';
+	import TransactionList, {
+		type FinancePanel,
+		type SpendingView
+	} from '$lib/components/transactions/TransactionList.svelte';
 	import FinanceAccountList from '$lib/components/finance/FinanceAccountList.svelte';
 	import WeatherDisplay from '$lib/components/weather/WeatherDisplay.svelte';
 	import WeatherDisplaySkeleton from '$lib/components/weather/WeatherDisplaySkeleton.svelte';
@@ -20,6 +23,8 @@
 
 	let prompt = $state('');
 	let activeView = $state<PageView>('home');
+	let financePanel = $state<FinancePanel>('overview');
+	let spendingView = $state<SpendingView>('chart');
 	let selectedAccountId = $state<string | null>(null);
 
 	function selectAccount(accountId: string) {
@@ -33,24 +38,74 @@
 
 	function showFinance() {
 		activeView = 'finance';
+		financePanel = 'overview';
+		spendingView = 'chart';
 	}
 
 	function showHome() {
 		activeView = 'home';
+		financePanel = 'overview';
+		spendingView = 'chart';
 		selectedAccountId = null;
 	}
+
+	function showSpending() {
+		financePanel = 'spending';
+		spendingView = 'chart';
+	}
+
+	function showFinanceOverview() {
+		financePanel = 'overview';
+		spendingView = 'chart';
+	}
+
+	function showSpendingChart() {
+		spendingView = 'chart';
+	}
+
+	function handleFinanceBack() {
+		if (financePanel === 'spending' && spendingView === 'all') {
+			showSpendingChart();
+			return;
+		}
+
+		if (financePanel === 'spending') {
+			showFinanceOverview();
+			return;
+		}
+
+		showHome();
+	}
+
+	const financeBackLabel = $derived(
+		financePanel === 'spending' && spendingView === 'all'
+			? 'Spending'
+			: financePanel === 'spending'
+				? 'Finances'
+				: 'Home'
+	);
+
+	const financePageTitle = $derived(
+		financePanel === 'spending' && spendingView === 'all'
+			? 'Transactions'
+			: financePanel === 'spending'
+				? 'Spending'
+				: 'Finances'
+	);
 </script>
 
 <div class="page" class:page--finance={activeView === 'finance'}>
-	<div
-		class="weather-slot flex w-full justify-center lg:absolute lg:start-0 lg:top-0 lg:z-20 lg:w-auto lg:justify-start"
-	>
-		{#await data.weather}
-			<WeatherDisplaySkeleton />
-		{:then weather}
-			<WeatherDisplay weather={weather.weather} error={weather.weatherError} />
-		{/await}
-	</div>
+	{#if activeView === 'home'}
+		<div
+			class="weather-slot flex w-full justify-center lg:absolute lg:start-0 lg:top-0 lg:z-20 lg:w-auto lg:justify-start"
+		>
+			{#await data.weather}
+				<WeatherDisplaySkeleton />
+			{:then weather}
+				<WeatherDisplay weather={weather.weather} error={weather.weatherError} />
+			{/await}
+		</div>
+	{/if}
 
 	{#if activeView === 'home'}
 		<div class="home-hub mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-3xl items-center justify-center py-8">
@@ -99,14 +154,20 @@
 				type="button"
 				class="finance-view__enter section-link section-link--back self-start"
 				style="--enter-index: 0"
-				onclick={showHome}
+				onclick={handleFinanceBack}
 			>
 				<ArrowLeftIcon class="section-link__icon" aria-hidden="true" />
-				Home
+				{financeBackLabel}
 			</button>
 
 			<div class="finance-view__enter finance-view__header" style="--enter-index: 1">
-				<h1 class="finance-view__title">Finances</h1>
+				<div class="finance-view__title-wrap">
+					{#key financePageTitle}
+						<h1 class="finance-view__title finance-view__title--enter">
+							{financePageTitle}
+						</h1>
+					{/key}
+				</div>
 
 				{#await data.finances then finances}
 					{#if !finances.accountBalancesError && finances.accounts.length > 0}
@@ -121,7 +182,14 @@
 			</div>
 
 			<div class="finance-view__enter finance-view__body" style="--enter-index: 2">
-				<TransactionList finances={data.finances} bind:selectedAccountId class="w-full" />
+				<TransactionList
+					finances={data.finances}
+					bind:selectedAccountId
+					bind:spendingView
+					panel={financePanel}
+					onViewSpending={showSpending}
+					class="w-full"
+				/>
 			</div>
 		</div>
 	{/if}
@@ -291,12 +359,39 @@
 		flex-wrap: wrap;
 	}
 
+	.finance-view__title-wrap {
+		overflow: hidden;
+		min-width: 0;
+	}
+
 	.finance-view__title {
 		margin: 0;
 		font-size: 1.875rem;
 		font-weight: 500;
 		line-height: 1.2;
 		color: var(--color-primary);
+	}
+
+	.finance-view__title--enter {
+		animation: finance-title-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	@keyframes finance-title-enter {
+		from {
+			opacity: 0;
+			transform: translateY(0.75rem);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.finance-view__title--enter {
+			animation: none;
+		}
 	}
 
 	@media (min-width: 640px) {
