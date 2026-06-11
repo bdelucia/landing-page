@@ -40,6 +40,8 @@
 		height: 100%;
 		object-fit: cover;
 		object-position: center;
+		filter: blur(12px);
+		transform: scale(1.06);
 	}
 
 	.content {
@@ -48,7 +50,9 @@
 		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
-		min-height: 100dvh;
+		height: 100dvh;
+		max-height: 100dvh;
+		overflow: auto;
 		padding: 2rem;
 	}
 </style>
