@@ -93,9 +93,7 @@ async function fetchRowsForItem(
 	if (shouldUseInvestmentsBalanceApi(itemLabel, plaid.environment)) {
 		try {
 			const accounts = await fetchInvestmentAccountsWithBalances(plaid, item);
-			return accounts.map((account) =>
-				toSnapshotRow(account, item, snapshotTime, resolvedItemId)
-			);
+			return accounts.map((account) => toSnapshotRow(account, item, snapshotTime, resolvedItemId));
 		} catch (investmentsError) {
 			console.warn(
 				`[balance-sync] Investments holdings fetch failed for "${itemLabel}", falling back to /accounts/balance/get: ${formatPlaidApiError(investmentsError)}`

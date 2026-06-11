@@ -35,10 +35,7 @@ function enrichInvestmentAccountBalances(
 
 		if (holdingsTotal > 0) {
 			const computed = roundMoney(holdingsTotal + cash);
-			current =
-				plaidCurrent != null
-					? Math.max(computed, roundMoney(plaidCurrent))
-					: computed;
+			current = plaidCurrent != null ? Math.max(computed, roundMoney(plaidCurrent)) : computed;
 		} else {
 			current = plaidCurrent ?? account.balances.available ?? null;
 		}
