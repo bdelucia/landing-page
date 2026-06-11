@@ -4,7 +4,6 @@
 		TOTAL_BALANCE_CHART_COLOR,
 		type ChartConfig
 	} from '$lib/components/ui/chart/chart-utils';
-	import type { CategoryBalanceSummary } from '$lib/hooks/finances/account-balances';
 	import {
 		investmentDisplayBalanceForDay,
 		investmentEarningsChange,
@@ -18,7 +17,6 @@
 	} from '$lib/hooks/finances/investment-chart-padding';
 	import {
 		accountSeriesKey,
-		categoryTotalsFromChartPoint,
 		chartPointTotal,
 		type BankAccountDetail
 	} from '$lib/hooks/finances/bank-accounts';
@@ -31,21 +29,28 @@
 	import { currentChartDayKey, formatChartDayLabel } from '$lib/hooks/chart/chart-date';
 	import AnimatedBalanceCounter from '$lib/components/balance/AnimatedBalanceCounter.svelte';
 	import { LineChart } from 'layerchart';
+	import { cubicOut } from 'svelte/easing';
+	import { prefersReducedMotion } from 'svelte/motion';
+
+	const CHART_LINE_TRANSITION_MS = 520;
+
+	const CHART_LINE_MOTION_ENABLED = {
+		type: 'tween',
+		duration: CHART_LINE_TRANSITION_MS,
+		easing: cubicOut
+	} as const;
 
 	let {
 		detail,
 		totalOnly = false,
-		categorySummaries = [],
-		itemLabelsByItemId = {},
+		summaryLabel = 'Total',
 		class: className = ''
 	}: {
 		detail: BankAccountDetail;
 		/** When true, only the combined total line is shown (no per-account toggles). */
 		totalOnly?: boolean;
-		/** Per-category labels and today's totals for the all-banks header row. */
-		categorySummaries?: CategoryBalanceSummary[];
-		/** Maps Plaid item ids to bank labels for category hover totals. */
-		itemLabelsByItemId?: Record<string, string>;
+		/** Label shown above the main balance figure. */
+		summaryLabel?: string;
 		class?: string;
 	} = $props();
 
@@ -193,17 +198,12 @@
 		return filteredChartData.find((point) => point.sortDate === tooltipPoint.sortDate) ?? null;
 	});
 
-	const hoveredCategoryTotals = $derived.by(() => {
-		if (!hoveredChartPoint) return null;
-		return categoryTotalsFromChartPoint(detail.accounts, itemLabelsByItemId, hoveredChartPoint);
-	});
-
 	const totalBalanceChange = $derived.by(() => {
 		const timeline = detail.investmentContributionTimeline;
-		const getValue = (point: (typeof totalChartData)[number]) =>
+		const getTotalValue = (point: (typeof totalChartData)[number]) =>
 			typeof point.total === 'number' ? point.total : chartPointTotal(point);
 
-		if (timeline) {
+		if (timeline && activeChart === 'total') {
 			if (hoveredChartPoint) {
 				const endIndex = totalChartData.findIndex(
 					(point) => point.sortDate === hoveredChartPoint.sortDate
@@ -211,7 +211,7 @@
 				if (endIndex >= 0) {
 					return investmentEarningsChange(
 						totalChartData,
-						getValue,
+						getTotalValue,
 						timeline,
 						firstRealPlaidDay,
 						endIndex
@@ -221,22 +221,30 @@
 
 			return investmentEarningsChange(
 				totalChartData,
-				getValue,
+				getTotalValue,
 				timeline,
 				firstRealPlaidDay
 			);
 		}
 
+		const chartData = activeChart === 'total' ? totalChartData : filteredChartData;
+		const getValue = (point: (typeof filteredChartData)[number]) => {
+			if (activeChart === 'total') {
+				return typeof point.total === 'number' ? point.total : chartPointTotal(point);
+			}
+
+			const value = point[activeChart];
+			return typeof value === 'number' ? value : 0;
+		};
+
 		if (hoveredChartPoint) {
-			const endIndex = totalChartData.findIndex(
-				(point) => point.sortDate === hoveredChartPoint.sortDate
-			);
+			const endIndex = chartData.findIndex((point) => point.sortDate === hoveredChartPoint.sortDate);
 			if (endIndex >= 0) {
-				return chartBalanceChange(totalChartData, getValue, endIndex);
+				return chartBalanceChange(chartData, getValue, endIndex);
 			}
 		}
 
-		return chartBalanceChange(totalChartData, getValue);
+		return chartBalanceChange(chartData, getValue);
 	});
 
 	const displayedTotalValue = $derived.by(() => {
@@ -248,7 +256,12 @@
 		}
 
 		if (!hoveredChartPoint || hoveredChartPoint.sortDate === todayKey) {
-			return totalBalance;
+			if (activeChart === 'total') {
+				return totalBalance;
+			}
+
+			const account = headerAccounts.find((entry) => accountSeriesKey(entry.id) === activeChart);
+			return account?.balance ?? totalBalance;
 		}
 
 		const snapshotTotal =
@@ -318,15 +331,6 @@
 		};
 	});
 
-	const chartContainerClass =
-		'h-[240px] w-full [&_.lc-root-container]:h-full ' +
-		'[&_.lc-highlight-line]:!stroke-[var(--highlight-color)] [&_.lc-highlight-line]:!stroke-1 ' +
-		'[&_.lc-highlight-line]:![stroke-dasharray:none] [&_.lc-highlight-point]:!stroke-background ' +
-		'[&_.lc-highlight-point]:![stroke-width:3px] [&_.lc-rule-x-line:not(.lc-grid-x-rule)]:!stroke-border/40 ' +
-		'[&_.lc-rule-y-line:not(.lc-grid-y-rule)]:!stroke-border/40 [&_.lc-axis-tick]:!stroke-border/40 ' +
-		'[&_.lc-axis-tick-label]:!hidden ' +
-		'[&_.lc-spline-path]:!stroke-[var(--highlight-color)] [&_.lc-spline-path]:!stroke-[2.5px]';
-
 	const selectorItems = $derived(
 		headerAccounts.map((account) => {
 			const key = accountSeriesKey(account.id);
@@ -340,24 +344,33 @@
 		})
 	);
 
-	const categoryHeaderItems = $derived(
-		categorySummaries.map((category) => {
-			const hoveredTotal = hoveredCategoryTotals?.[category.key];
+	const showAccountSelectors = $derived(!totalOnly && selectorItems.length > 1);
 
-			return {
-				key: category.key,
-				label: category.label,
-				value: hoveredTotal ?? category.balance
-			};
-		})
-	);
+	const activeSummaryLabel = $derived.by(() => {
+		if (activeChart === 'total') {
+			return summaryLabel;
+		}
 
-	const summaryColumnClass =
-		'relative flex min-w-[8rem] flex-1 flex-col items-center justify-center gap-1 border-t border-border px-6 py-3 text-center even:border-l sm:min-w-[9rem] sm:border-t-0 sm:border-l sm:px-8 sm:py-4';
+		const account = headerAccounts.find((entry) => accountSeriesKey(entry.id) === activeChart);
+		return account?.typeLabel ?? summaryLabel;
+	});
 
 	function selectChart(key: string) {
 		activeChart = activeChart === key ? 'total' : key;
 	}
+
+	const chartLineMotion = $derived(
+		prefersReducedMotion.current ? ({ type: 'none' } as const) : CHART_LINE_MOTION_ENABLED
+	);
+
+	const chartContainerClass =
+		'h-[240px] w-full [&_.lc-root-container]:h-full ' +
+		'[&_.lc-highlight-line]:!stroke-[var(--highlight-color)] [&_.lc-highlight-line]:!stroke-1 ' +
+		'[&_.lc-highlight-line]:![stroke-dasharray:none] [&_.lc-highlight-point]:!stroke-background ' +
+		'[&_.lc-highlight-point]:![stroke-width:3px] [&_.lc-rule-x-line:not(.lc-grid-x-rule)]:!stroke-border/40 ' +
+		'[&_.lc-rule-y-line:not(.lc-grid-y-rule)]:!stroke-border/40 [&_.lc-axis-tick]:!stroke-border/40 ' +
+		'[&_.lc-axis-tick-label]:!hidden ' +
+		'[&_.lc-path]:!stroke-[var(--highlight-color)] [&_.lc-path]:!stroke-[2.5px]';
 </script>
 
 {#snippet suppressTooltip()}{/snippet}
@@ -368,138 +381,81 @@
 			No balance history to show yet.
 		</p>
 	{:else}
-		<div class="border-border flex flex-col items-stretch border-b sm:flex-row">
-			<div
-				class="flex flex-1 items-center justify-between gap-4 px-5 py-4 sm:px-6 sm:py-5 {displayedContributions != null
-					? 'border-border border-b sm:border-r sm:border-b-0'
-					: ''}"
-			>
-				<div class="flex min-w-0 items-center gap-3">
-					<span class="text-muted-foreground shrink-0 text-sm font-medium">Total</span>
-					<div class="flex min-w-0 flex-col gap-0.5">
-						<span
-							class="text-primary text-2xl font-semibold sm:text-3xl"
-							role="status"
-							aria-live="polite"
-						>
-							<AnimatedBalanceCounter
-								value={displayedTotalValue}
-								format={(amount) => balanceMoney.format(amount)}
-								class="font-semibold"
-							/>
-						</span>
+		<div class="chart-summary">
+			<div class="chart-summary__main">
+				<p class="chart-summary__label">{activeSummaryLabel}</p>
 
-						{#if totalBalanceChange}
-							{@const change = totalBalanceChange}
-							{@const isPositive = change.amount > 0}
-							{@const isNegative = change.amount < 0}
-							<span
-								class="flex items-center gap-1 text-sm font-semibold {isPositive
-									? 'text-income'
-									: isNegative
-										? 'text-debt'
-										: 'text-muted-foreground'}"
-								role="status"
-								aria-live="polite"
-							>
-								<svg
-									class="size-3 shrink-0"
-									viewBox="0 0 12 12"
-									aria-hidden="true"
-									fill="currentColor"
-								>
-									{#if isNegative}
-										<polygon points="6,8 1,3 11,3" />
-									{:else}
-										<polygon points="6,4 1,9 11,9" />
-									{/if}
-								</svg>
-								<span>
-									{balanceMoney.format(Math.abs(change.amount))}
-									{#if change.percent != null}
-										<span class="font-medium">
-											({isNegative ? '-' : ''}{percentFormat.format(Math.abs(change.percent))}%)
-										</span>
-									{/if}
-								</span>
-							</span>
+				<p class="chart-summary__value" role="status" aria-live="polite">
+					<AnimatedBalanceCounter
+						value={displayedTotalValue}
+						format={(amount) => balanceMoney.format(amount)}
+					/>
+				</p>
+
+				{#if totalBalanceChange}
+					{@const change = totalBalanceChange}
+					{@const isPositive = change.amount > 0}
+					{@const isNegative = change.amount < 0}
+					<p
+						class="chart-summary__change {isPositive
+							? 'chart-summary__change--positive'
+							: isNegative
+								? 'chart-summary__change--negative'
+								: 'chart-summary__change--neutral'}"
+						role="status"
+						aria-live="polite"
+					>
+						{balanceMoney.format(Math.abs(change.amount))}
+						{#if change.percent != null}
+							<span>({isNegative ? '-' : isPositive ? '+' : ''}{percentFormat.format(Math.abs(change.percent))}%)</span>
 						{/if}
-					</div>
-				</div>
-
-				{#if displayedContributions != null}
-					<div class="flex shrink-0 flex-col items-end gap-0.5 text-end" role="group" aria-label="Contributions">
-						<span class="text-muted-foreground text-xs">Contributions</span>
-						<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
-							<AnimatedBalanceCounter
-								value={displayedContributions}
-								format={(amount) => balanceMoney.format(amount)}
-								class="font-semibold"
-							/>
-						</span>
-					</div>
+					</p>
 				{/if}
 			</div>
 
-			{#if totalOnly && categoryHeaderItems.length > 0}
-				<div class="flex flex-wrap sm:flex-nowrap">
-					{#each categoryHeaderItems as item (item.key)}
-						<div class={summaryColumnClass}>
-							<span class="text-muted-foreground text-xs">{item.label}</span>
-							<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
-								<AnimatedBalanceCounter
-									value={item.value}
-									format={(amount) => balanceMoney.format(amount)}
-									class="font-semibold"
-								/>
-							</span>
-						</div>
-					{/each}
-				</div>
-			{:else if !totalOnly}
-				<div class="flex flex-wrap sm:flex-nowrap">
-					{#each selectorItems as item (item.key)}
-						{#if singleHeaderAccount}
-							<div class={summaryColumnClass}>
-								<span class="text-muted-foreground text-xs">{item.label}</span>
-								<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
-									<AnimatedBalanceCounter
-										value={item.value}
-										format={(amount) => balanceMoney.format(amount)}
-										class="font-semibold"
-									/>
-								</span>
-							</div>
-						{:else}
-							<button
-								type="button"
-								data-active={activeChart === item.key}
-								class="{summaryColumnClass} group hover:bg-surface data-[active=true]:bg-surface cursor-pointer transition-colors"
-								aria-pressed={activeChart === item.key}
-								onclick={() => selectChart(item.key)}
-							>
-								<span
-									class="text-xs transition-colors {activeChart === item.key
-										? 'text-primary font-medium'
-										: 'text-muted-foreground group-hover:text-primary'}"
+			{#if showAccountSelectors || displayedContributions != null}
+				<div class="chart-summary__stats">
+					{#if showAccountSelectors}
+						<div class="chart-summary__stats-group" role="group" aria-label="Account breakdown">
+							{#each selectorItems as item (item.key)}
+								<button
+									type="button"
+									class="chart-summary__stat"
+									data-active={activeChart === item.key}
+									aria-pressed={activeChart === item.key}
+									onclick={() => selectChart(item.key)}
 								>
-									{item.label}
-								</span>
-								<span class="text-primary text-base font-semibold sm:text-lg" aria-live="polite">
-									<AnimatedBalanceCounter
-										value={item.value}
-										format={(amount) => balanceMoney.format(amount)}
-										class="font-semibold"
-									/>
-								</span>
-							</button>
-						{/if}
-					{/each}
+									<p class="chart-summary__label">{item.label}</p>
+									<p class="chart-summary__stat-value" aria-live="polite">
+										<AnimatedBalanceCounter
+											value={item.value}
+											format={(amount) => balanceMoney.format(amount)}
+										/>
+									</p>
+								</button>
+							{/each}
+						</div>
+					{/if}
+
+					{#if displayedContributions != null}
+						<div class="chart-summary__stat" role="group" aria-label="Contributions">
+							<p class="chart-summary__label">Contributions</p>
+							<p class="chart-summary__stat-value" aria-live="polite">
+								<AnimatedBalanceCounter
+									value={displayedContributions}
+									format={(amount) => balanceMoney.format(amount)}
+								/>
+							</p>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
 
-		<div class="px-2 py-4 sm:px-5 sm:py-5">
+		<div
+			class="chart-body"
+			style="--finance-chart-transition-duration: {CHART_LINE_TRANSITION_MS}ms"
+		>
 			<div class="relative h-[240px] w-full">
 				<Chart.Container
 					config={chartConfig}
@@ -533,7 +489,8 @@
 								tickMarks: false
 							},
 							spline: {
-								strokeWidth: 2.5
+								strokeWidth: 2.5,
+								motion: chartLineMotion
 							}
 						}}
 					/>
@@ -551,19 +508,12 @@
 				{/if}
 			</div>
 
-			<div
-				class="mt-3 flex flex-wrap items-center justify-center gap-1 sm:gap-1.5"
-				role="group"
-				aria-label="Chart time range"
-			>
+			<div class="chart-range" role="group" aria-label="Chart time range">
 				{#each CHART_TIME_RANGE_OPTIONS as option (option.key)}
 					<button
 						type="button"
 						data-active={activeTimeRange === option.key}
-						class="data-[active=true]:bg-surface data-[active=true]:text-primary rounded-md px-2 py-1 text-[11px] font-medium transition-colors sm:px-2.5 sm:text-xs {activeTimeRange ===
-						option.key
-							? 'text-primary'
-							: 'text-muted-foreground hover:text-primary'}"
+						class="chart-range__button"
 						aria-pressed={activeTimeRange === option.key}
 						onclick={() => (activeTimeRange = option.key)}
 					>
@@ -574,3 +524,170 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.chart-summary {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1.5rem;
+	}
+
+	.chart-summary__main {
+		display: flex;
+		min-width: 0;
+		flex: 1;
+		flex-direction: column;
+		gap: 0.375rem;
+	}
+
+	.chart-summary__stats {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: flex-end;
+		gap: 1.25rem 1.5rem;
+	}
+
+	.chart-summary__stats-group {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: 1.25rem 1.5rem;
+	}
+
+	.chart-summary__stat {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.375rem;
+		border: 0;
+		background: transparent;
+		padding: 0;
+		text-align: end;
+		cursor: default;
+	}
+
+	button.chart-summary__stat {
+		cursor: pointer;
+	}
+
+	.chart-summary__stat-value {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 500;
+		color: var(--color-primary);
+		font-variant-numeric: tabular-nums;
+		transition: color 0.15s ease;
+	}
+
+	button.chart-summary__stat:hover .chart-summary__label,
+	button.chart-summary__stat:focus-visible .chart-summary__label,
+	button.chart-summary__stat[data-active='true'] .chart-summary__label {
+		color: var(--color-secondary);
+	}
+
+	button.chart-summary__stat:hover .chart-summary__stat-value,
+	button.chart-summary__stat:focus-visible .chart-summary__stat-value,
+	button.chart-summary__stat[data-active='true'] .chart-summary__stat-value {
+		color: var(--color-secondary);
+	}
+
+	button.chart-summary__stat:focus-visible {
+		outline: 2px solid var(--color-focus);
+		outline-offset: 2px;
+		border-radius: var(--radius-sm);
+	}
+
+	.chart-summary__label {
+		margin: 0;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-muted-foreground);
+	}
+
+	.chart-summary__value {
+		margin: 0;
+		font-size: clamp(1.75rem, 1.25rem + 1.5vw, 2.25rem);
+		font-weight: 500;
+		line-height: 1.1;
+		color: var(--color-primary);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.chart-summary__change {
+		margin: 0;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.chart-summary__change--positive {
+		color: var(--color-income);
+	}
+
+	.chart-summary__change--negative {
+		color: var(--color-debt);
+	}
+
+	.chart-summary__change--neutral {
+		color: var(--color-muted-foreground);
+	}
+
+	.chart-body {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding-top: 1.25rem;
+	}
+
+	.chart-body :global(.lc-path) {
+		transition: stroke var(--finance-chart-transition-duration, 520ms)
+			var(--finance-chart-transition-ease, cubic-bezier(0.22, 1, 0.36, 1));
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.chart-body :global(.lc-path) {
+			transition: none;
+		}
+	}
+
+	.chart-range {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.25rem 0.5rem;
+	}
+
+	.chart-range__button {
+		border: 0;
+		background: transparent;
+		padding: 0.25rem 0.375rem;
+		color: var(--color-muted-foreground);
+		font: inherit;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		cursor: pointer;
+		transition: color 0.15s ease;
+	}
+
+	.chart-range__button:hover,
+	.chart-range__button:focus-visible {
+		color: var(--color-primary);
+	}
+
+	.chart-range__button[data-active='true'] {
+		color: var(--color-secondary);
+	}
+
+	.chart-range__button:focus-visible {
+		outline: 2px solid var(--color-focus);
+		outline-offset: 2px;
+		border-radius: var(--radius-sm);
+	}
+</style>
