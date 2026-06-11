@@ -218,7 +218,30 @@
 	}
 
 	.home-hub__greeting {
+		--greeting-enter-duration: 520ms;
+		--greeting-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
 		margin-bottom: 0.5rem;
+		transform-origin: center center;
+		animation: home-greeting-enter var(--greeting-enter-duration) var(--greeting-enter-ease) both;
+	}
+
+	@keyframes home-greeting-enter {
+		from {
+			opacity: 0;
+			transform: translateY(2.5rem) scale(0.96);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.home-hub__greeting {
+			animation: none;
+		}
 	}
 
 	.home-hub__input {
