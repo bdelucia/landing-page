@@ -7,8 +7,16 @@ import { formatAccountTypeLabel } from '$lib/server/plaid/plaid-account-label';
 import { createPlaidClient, formatPlaidApiError } from '$lib/server/plaid/plaid';
 import type { PlaidConfig, PlaidLinkedItem } from '$data/api-config.types';
 import type { TransactionIcon, TransactionItem } from '$lib/hooks/finances/transactions';
+import { spendingTransactionFetchStartDayKey } from '$lib/hooks/finances/spending-time-range';
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+/** Max transactions pulled per linked item (calendar year window). */
+export const DASHBOARD_TRANSACTION_FETCH_COUNT = 500;
+
+function transactionFetchStartDate(): string {
+	return spendingTransactionFetchStartDayKey();
+}
 
 function toDateString(daysAgo: number): string {
 	const d = new Date();
@@ -127,7 +135,8 @@ function mapTransaction(
 	accountLabels: Map<string, string>
 ): TransactionItem {
 	const category = formatCategoryLabel(transaction);
-	const { amountLabel, isIncome } = formatAmountLabel(transaction.amount);
+	const amount = transaction.amount;
+	const { amountLabel, isIncome } = formatAmountLabel(amount);
 
 	return {
 		id: transaction.transaction_id,
@@ -138,6 +147,7 @@ function mapTransaction(
 		category,
 		dateLabel: formatTransactionDate(transaction.date, transaction.datetime),
 		sortDate: transactionSortKey(transaction),
+		amount,
 		amountLabel,
 		isIncome,
 		icon: categoryIcon(category)
@@ -152,7 +162,8 @@ function mapInvestmentTransaction(
 	securitiesById: Map<string, Security>
 ): TransactionItem {
 	const category = formatInvestmentCategory(transaction);
-	const { amountLabel, isIncome } = formatAmountLabel(transaction.amount);
+	const amount = transaction.amount;
+	const { amountLabel, isIncome } = formatAmountLabel(amount);
 
 	return {
 		id: transaction.investment_transaction_id,
@@ -163,6 +174,7 @@ function mapInvestmentTransaction(
 		category,
 		dateLabel: formatTransactionDate(transaction.date, transaction.transaction_datetime),
 		sortDate: investmentTransactionSortKey(transaction),
+		amount,
 		amountLabel,
 		isIncome,
 		icon: categoryIcon(category)
@@ -224,7 +236,7 @@ async function fetchBankingTransactionsForItem(
 	try {
 		const transactionsResponse = await client.transactionsGet({
 			access_token: item.accessToken,
-			start_date: toDateString(90),
+			start_date: transactionFetchStartDate(),
 			end_date: toDateString(0),
 			options: { count, offset: 0 }
 		});
@@ -259,7 +271,7 @@ async function fetchInvestmentTransactionsForItem(
 	try {
 		const response = await client.investmentsTransactionsGet({
 			access_token: item.accessToken,
-			start_date: toDateString(90),
+			start_date: transactionFetchStartDate(),
 			end_date: toDateString(0),
 			options: { count, offset: 0 }
 		});
@@ -333,7 +345,7 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = apiSecrets;
-	const cacheKey = `plaid-transactions:v4:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
+	const cacheKey = `plaid-transactions:v6:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
 		.map((item) => item.itemId ?? item.accessToken)
 		.join(',')}`;
 

@@ -4,7 +4,7 @@ import { isPlaidLinked } from '$lib/server/config/integration-config';
 import { loadLatestBalancesFromDb } from '$lib/server/balances/latest-balance-snapshots';
 import { prepareBalanceSnapshots } from '$lib/server/balances/sandbox-balance-snapshots';
 import { fetchCurrentWeather } from '$lib/server/weather/open-weather';
-import { fetchRecentTransactions } from '$lib/server/plaid/plaid-transactions';
+import { fetchRecentTransactions, DASHBOARD_TRANSACTION_FETCH_COUNT } from '$lib/server/plaid/plaid-transactions';
 import { syncInvestmentContributions } from '$lib/server/investments/investment-contributions';
 
 export type { DashboardFinances, DashboardWeather } from '$lib/hooks/dashboard/dashboard-data';
@@ -20,7 +20,7 @@ export function loadDashboardWeather(): Promise<DashboardWeather> {
 
 export async function loadDashboardFinances(): Promise<DashboardFinances> {
 	try {
-		const transactionsResult = await fetchRecentTransactions(10);
+		const transactionsResult = await fetchRecentTransactions(DASHBOARD_TRANSACTION_FETCH_COUNT);
 
 		if (!isPlaidLinked(apiSecrets)) {
 			return {
