@@ -11,6 +11,8 @@ export type TransactionItem = {
 	dateLabel: string;
 	/** ISO timestamp for sorting when merging multiple Plaid Items (not shown in UI) */
 	sortDate: string;
+	/** Raw Plaid amount — positive for spending, negative for income. */
+	amount: number;
 	amountLabel: string;
 	isIncome: boolean;
 	icon: TransactionIcon;
