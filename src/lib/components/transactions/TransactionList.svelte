@@ -2,7 +2,7 @@
 	import { bankBrandColor } from '$lib/hooks/finances/account-balances';
 	import { buildAggregatedBankAccountDetail } from '$lib/hooks/finances/bank-accounts';
 	import type { DashboardFinances } from '$lib/hooks/dashboard/dashboard-data';
-	import type { TransactionItem } from '$lib/hooks/finances/transactions';
+	import { isSpendingTransaction, type TransactionItem } from '$lib/hooks/finances/transactions';
 	import {
 		filterTransactionsBySpendingRange,
 		type SpendingTimeRange
@@ -104,7 +104,7 @@
 			: transactions;
 
 		if (spendingOnly) {
-			pool = pool.filter((transaction) => !transaction.isIncome);
+			pool = pool.filter((transaction) => isSpendingTransaction(transaction));
 		}
 
 		if (spendingOnly && spendingRange) {

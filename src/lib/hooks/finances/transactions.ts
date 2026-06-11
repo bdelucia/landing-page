@@ -17,3 +17,13 @@ export type TransactionItem = {
 	isIncome: boolean;
 	icon: TransactionIcon;
 };
+
+function isTransferOutCategory(category: string): boolean {
+	const key = category.toLowerCase();
+	return key.includes('transfer out') || key === 'transfer';
+}
+
+/** Spending excludes income and outbound transfers between accounts. */
+export function isSpendingTransaction(transaction: TransactionItem): boolean {
+	return !transaction.isIncome && !isTransferOutCategory(transaction.category);
+}

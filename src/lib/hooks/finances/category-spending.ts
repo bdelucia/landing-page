@@ -1,5 +1,5 @@
 import { formatUsdBalance } from '$lib/hooks/finances/account-balances';
-import type { TransactionItem } from '$lib/hooks/finances/transactions';
+import { isSpendingTransaction, type TransactionItem } from '$lib/hooks/finances/transactions';
 
 export type CategorySpendingSlice = {
 	category: string;
@@ -31,12 +31,14 @@ function categoryKey(category: string): string {
 }
 
 function spendingAmount(transaction: TransactionItem): number {
+	if (!isSpendingTransaction(transaction)) return 0;
+
 	if (typeof transaction.amount === 'number' && Number.isFinite(transaction.amount)) {
-		return transaction.isIncome ? 0 : Math.abs(transaction.amount);
+		return Math.abs(transaction.amount);
 	}
 
 	const parsed = Number(transaction.amountLabel.replace(/[^0-9.-]+/g, ''));
-	return transaction.isIncome || !Number.isFinite(parsed) ? 0 : Math.abs(parsed);
+	return !Number.isFinite(parsed) ? 0 : Math.abs(parsed);
 }
 
 export function buildCategorySpending(
