@@ -95,17 +95,21 @@
 </script>
 
 <div class="page" class:page--finance={activeView === 'finance'}>
-	{#if activeView === 'home'}
-		<div
-			class="weather-slot flex w-full justify-center lg:absolute lg:start-0 lg:top-0 lg:z-20 lg:w-auto lg:justify-start"
-		>
-			{#await data.weather}
+	<div
+		class="weather-slot flex w-full justify-center lg:absolute lg:start-0 lg:top-0 lg:z-20 lg:w-auto lg:justify-start"
+		class:weather-slot--visible={activeView === 'home'}
+		class:weather-slot--hidden={activeView !== 'home'}
+	>
+		{#await data.weather}
+			<div class="weather-widget">
 				<WeatherDisplaySkeleton />
-			{:then weather}
+			</div>
+		{:then weather}
+			<div class="weather-widget weather-widget--ready">
 				<WeatherDisplay weather={weather.weather} error={weather.weatherError} />
-			{/await}
-		</div>
-	{/if}
+			</div>
+		{/await}
+	</div>
 
 	{#if activeView === 'home'}
 		<div class="home-hub mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-3xl items-center justify-center py-8">
@@ -207,6 +211,78 @@
 		flex-direction: column;
 		min-height: 0;
 		overflow: hidden;
+	}
+
+	.weather-slot {
+		--weather-toggle-duration: 480ms;
+		--weather-toggle-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+		transform-origin: top center;
+	}
+
+	.weather-slot--visible {
+		animation-name: weather-slot-enter;
+		animation-duration: var(--weather-toggle-duration);
+		animation-timing-function: var(--weather-toggle-ease);
+		animation-fill-mode: both;
+	}
+
+	.weather-slot--hidden {
+		position: absolute;
+		top: 0;
+		pointer-events: none;
+		animation-name: weather-slot-exit;
+		animation-duration: var(--weather-toggle-duration);
+		animation-timing-function: var(--weather-toggle-ease);
+		animation-fill-mode: both;
+	}
+
+	.weather-widget--ready {
+		animation: weather-widget-enter 420ms var(--weather-toggle-ease) both;
+	}
+
+	@keyframes weather-slot-enter {
+		from {
+			opacity: 0;
+			transform: translateY(-1rem) scale(0.96);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+
+	@keyframes weather-slot-exit {
+		from {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		to {
+			opacity: 0;
+			transform: translateY(-1rem);
+		}
+	}
+
+	@keyframes weather-widget-enter {
+		from {
+			opacity: 0;
+			transform: scale(0.94);
+		}
+
+		to {
+			opacity: 1;
+			transform: scale(1);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.weather-slot--visible,
+		.weather-slot--hidden,
+		.weather-widget--ready {
+			animation: none;
+		}
 	}
 
 	.home-hub {
