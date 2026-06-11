@@ -20,7 +20,7 @@ export function loadDashboardWeather(): Promise<DashboardWeather> {
 
 export async function loadDashboardFinances(): Promise<DashboardFinances> {
 	try {
-		const transactionsResult = await fetchRecentTransactions(5);
+		const transactionsResult = await fetchRecentTransactions(10);
 
 		if (!isPlaidLinked(apiSecrets)) {
 			return {
