@@ -25,12 +25,16 @@
 	let {
 		transactions,
 		selectedAccountId = null,
+		enabledSubAccountIds = [],
+		allSubAccountIds = [],
 		selectedCategory = $bindable<string | null>(null),
 		timeRange = $bindable<SpendingTimeRange>('1M'),
 		class: className = ''
 	}: {
 		transactions: TransactionItem[];
 		selectedAccountId?: string | null;
+		enabledSubAccountIds?: string[];
+		allSubAccountIds?: string[];
 		selectedCategory?: string | null;
 		timeRange?: SpendingTimeRange;
 		class?: string;
@@ -43,7 +47,14 @@
 	let chartContext = $state<any>();
 
 	const rangedTransactions = $derived(filterTransactionsBySpendingRange(transactions, timeRange));
-	const chartData = $derived(buildCategorySpending(rangedTransactions, selectedAccountId));
+	const chartData = $derived(
+		buildCategorySpending(
+			rangedTransactions,
+			selectedAccountId,
+			enabledSubAccountIds,
+			allSubAccountIds
+		)
+	);
 	const totalSpend = $derived(totalCategorySpending(chartData));
 	const periodLabel = $derived(spendingTimeRangePeriodLabel(timeRange));
 

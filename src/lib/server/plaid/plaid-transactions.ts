@@ -141,6 +141,7 @@ function mapTransaction(
 	return {
 		id: transaction.transaction_id,
 		sourceId,
+		accountId: transaction.account_id,
 		bankLabel,
 		accountLabel: accountLabels.get(transaction.account_id) ?? 'Account',
 		merchant: transaction.merchant_name ?? transaction.name,
@@ -168,6 +169,7 @@ function mapInvestmentTransaction(
 	return {
 		id: transaction.investment_transaction_id,
 		sourceId,
+		accountId: transaction.account_id,
 		bankLabel,
 		accountLabel: accountLabels.get(transaction.account_id) ?? 'Account',
 		merchant: resolveInvestmentMerchant(transaction, securitiesById),
@@ -345,7 +347,7 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = apiSecrets;
-	const cacheKey = `plaid-transactions:v6:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
+	const cacheKey = `plaid-transactions:v7:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
 		.map((item) => item.itemId ?? item.accessToken)
 		.join(',')}`;
 

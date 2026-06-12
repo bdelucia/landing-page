@@ -4,6 +4,8 @@ export type TransactionItem = {
 	id: string;
 	/** Matches `AccountBalanceItem.id` for the linked Plaid Item */
 	sourceId: string;
+	/** Plaid account_id for the sub-account within the linked Item */
+	accountId: string;
 	bankLabel: string;
 	accountLabel: string;
 	merchant: string;

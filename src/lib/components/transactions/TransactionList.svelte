@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { bankBrandColor } from '$lib/hooks/finances/account-balances';
-	import { buildAggregatedBankAccountDetail } from '$lib/hooks/finances/bank-accounts';
+	import { accountBalanceIcon } from '$lib/hooks/finances/account-balance-icons';
+	import {
+		buildAggregatedBankAccountDetail,
+		type BankAccountItem
+	} from '$lib/hooks/finances/bank-accounts';
 	import type { DashboardFinances } from '$lib/hooks/dashboard/dashboard-data';
 	import { isSpendingTransaction, type TransactionItem } from '$lib/hooks/finances/transactions';
 	import {
@@ -8,6 +12,7 @@
 		type SpendingTimeRange
 	} from '$lib/hooks/finances/spending-time-range';
 	import {
+		filterTransactionsBySubAccounts,
 		matchesTransactionSearch,
 		SPENDING_TRANSACTION_SORT_OPTIONS,
 		sortTransactions,
@@ -29,6 +34,7 @@
 	let {
 		finances,
 		selectedAccountId = $bindable(null),
+		subAccountFilterEnabledIds = $bindable<string[]>([]),
 		spendingView = $bindable<SpendingView>('chart'),
 		panel = 'overview',
 		onViewSpending,
@@ -36,6 +42,7 @@
 	}: {
 		finances: Promise<DashboardFinances>;
 		selectedAccountId?: string | null;
+		subAccountFilterEnabledIds?: string[];
 		spendingView?: SpendingView;
 		panel?: FinancePanel;
 		onViewSpending?: () => void;
@@ -85,6 +92,11 @@
 	});
 
 	$effect(() => {
+		void subAccountFilterEnabledIds;
+		spendingTransactionsPage = 1;
+	});
+
+	$effect(() => {
 		if (spendingView === 'all') {
 			spendingTransactionsPage = 1;
 		}
@@ -97,11 +109,17 @@
 		spendingOnly = false,
 		spendingRange: SpendingTimeRange | null = null,
 		searchQuery = '',
-		sort: SpendingTransactionSort = 'date-desc'
+		sort: SpendingTransactionSort = 'date-desc',
+		enabledSubAccountIds: readonly string[] = [],
+		allSubAccountIds: readonly string[] = []
 	): TransactionItem[] {
 		let pool = accountId
 			? transactions.filter((transaction) => transaction.sourceId === accountId)
 			: transactions;
+
+		if (spendingOnly && accountId && allSubAccountIds.length > 1) {
+			pool = filterTransactionsBySubAccounts(pool, enabledSubAccountIds);
+		}
 
 		if (spendingOnly) {
 			pool = pool.filter((transaction) => isSpendingTransaction(transaction));
@@ -181,6 +199,32 @@
 			dashboardFinances.accounts.find((account) => account.id === accountId)?.label ?? 'Total'
 		);
 	}
+
+	function transactionsAccountTitle(
+		dashboardFinances: DashboardFinances,
+		accountId: string | null,
+		bankAccounts: BankAccountItem[],
+		enabledSubAccountIds: readonly string[]
+	): string {
+		if (!accountId) return 'All accounts';
+
+		const bankLabel =
+			dashboardFinances.accounts.find((account) => account.id === accountId)?.label ??
+			'All accounts';
+
+		if (bankAccounts.length <= 1) return bankLabel;
+
+		const enabledLabels = bankAccounts
+			.filter((account) => enabledSubAccountIds.includes(account.id))
+			.map((account) => account.typeLabel);
+
+		if (enabledLabels.length === 0 || enabledLabels.length === bankAccounts.length) {
+			return bankLabel;
+		}
+
+		return `${bankLabel} (${enabledLabels.join(', ')})`;
+	}
+
 </script>
 
 {#await finances}
@@ -216,6 +260,10 @@
 		: aggregatedBankDetail}
 	{@const isSpendingChart = showSpendingChart(panel, spendingView)}
 	{@const isSpendingAll = showSpendingAll(panel, spendingView)}
+	{@const selectedBankAccounts = selectedAccountId
+		? (bankAccountDetails[selectedAccountId]?.accounts ?? [])
+		: []}
+	{@const selectedBankAccountIds = selectedBankAccounts.map((account) => account.id)}
 	{@const filteredRows = filterTransactions(
 		transactions,
 		selectedAccountId,
@@ -223,7 +271,9 @@
 		panel === 'spending',
 		panel === 'spending' ? spendingTimeRange : null,
 		isSpendingAll ? spendingSearchQuery : '',
-		isSpendingAll ? spendingSort : 'date-desc'
+		isSpendingAll ? spendingSort : 'date-desc',
+		subAccountFilterEnabledIds,
+		selectedBankAccountIds
 	)}
 	{@const pagination = isSpendingAll
 		? paginateTransactions(filteredRows, spendingTransactionsPage, TRANSACTIONS_PAGE_SIZE)
@@ -232,6 +282,18 @@
 	{@const totalPages = pagination.totalPages}
 	{@const currentPage = pagination.currentPage}
 	{@const transactionsHeadingLabel = transactionsHeading(panel, spendingView, selectedCategory)}
+	{@const selectedBankAccount = selectedAccountId
+		? dashboardFinances.accounts.find((account) => account.id === selectedAccountId)
+		: null}
+	{@const transactionsAccountTitleLabel = transactionsAccountTitle(
+		dashboardFinances,
+		selectedAccountId,
+		selectedBankAccounts,
+		subAccountFilterEnabledIds
+	)}
+	{@const transactionsAccountTitleIcon = selectedBankAccount
+		? selectedBankAccount.icon || accountBalanceIcon(selectedBankAccount.label)
+		: undefined}
 	{@const emptyMessage = emptyTransactionsMessage(
 		panel,
 		spendingView,
@@ -251,6 +313,8 @@
 					<SpendingCategoryChart
 						{transactions}
 						{selectedAccountId}
+						enabledSubAccountIds={subAccountFilterEnabledIds}
+						allSubAccountIds={selectedBankAccountIds}
 						bind:selectedCategory
 						bind:timeRange={spendingTimeRange}
 						class="w-full"
@@ -289,9 +353,19 @@
 				<h2
 					id="recent-transactions-heading"
 					class="finance-panel__transactions-heading"
-					class:sr-only={isSpendingAll}
+					class:finance-panel__account-title={isSpendingAll}
 				>
-					{transactionsHeadingLabel}
+					{#if isSpendingAll && transactionsAccountTitleIcon}
+						<img
+							src={transactionsAccountTitleIcon}
+							alt=""
+							width={24}
+							height={24}
+							class="finance-panel__account-title-icon"
+							aria-hidden="true"
+						/>
+					{/if}
+					<span>{isSpendingAll ? transactionsAccountTitleLabel : transactionsHeadingLabel}</span>
 				</h2>
 				{#if isSpendingChart}
 					<button
@@ -608,7 +682,8 @@
 	}
 
 	.finance-panel__transactions-header--all {
-		justify-content: flex-end;
+		align-items: center;
+		justify-content: space-between;
 	}
 
 	.finance-panel__transactions-heading {
@@ -618,6 +693,26 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--color-muted-foreground);
+		flex-shrink: 0;
+	}
+
+	.finance-panel__account-title {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 1.125rem;
+		font-weight: 500;
+		letter-spacing: normal;
+		text-transform: none;
+		color: var(--color-primary);
+		min-width: 0;
+	}
+
+	.finance-panel__account-title-icon {
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: var(--radius-sm);
+		object-fit: contain;
 		flex-shrink: 0;
 	}
 

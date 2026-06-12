@@ -1,4 +1,5 @@
 import { formatUsdBalance } from '$lib/hooks/finances/account-balances';
+import { filterTransactionsBySubAccounts } from '$lib/hooks/finances/transaction-list-filters';
 import { isSpendingTransaction, type TransactionItem } from '$lib/hooks/finances/transactions';
 
 export type CategorySpendingSlice = {
@@ -43,11 +44,17 @@ function spendingAmount(transaction: TransactionItem): number {
 
 export function buildCategorySpending(
 	transactions: TransactionItem[],
-	selectedAccountId: string | null = null
+	selectedAccountId: string | null = null,
+	enabledSubAccountIds: readonly string[] = [],
+	allSubAccountIds: readonly string[] = []
 ): CategorySpendingSlice[] {
-	const pool = selectedAccountId
+	let pool = selectedAccountId
 		? transactions.filter((transaction) => transaction.sourceId === selectedAccountId)
 		: transactions;
+
+	if (selectedAccountId && allSubAccountIds.length > 1) {
+		pool = filterTransactionsBySubAccounts(pool, enabledSubAccountIds);
+	}
 
 	const totals = new Map<string, number>();
 

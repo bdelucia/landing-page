@@ -26,10 +26,41 @@
 	let financePanel = $state<FinancePanel>('overview');
 	let spendingView = $state<SpendingView>('chart');
 	let selectedAccountId = $state<string | null>(null);
+	let subAccountFilterBankId = $state<string | null>(null);
+	let subAccountFilterEnabledIds = $state<string[]>([]);
 
-	function selectAccount(accountId: string) {
-		selectedAccountId = selectedAccountId === accountId ? null : accountId;
+	function selectAccount(accountId: string | null) {
+		selectedAccountId = accountId;
 	}
+
+	$effect(() => {
+		const bankId = selectedAccountId;
+
+		if (!bankId) {
+			subAccountFilterBankId = null;
+			subAccountFilterEnabledIds = [];
+			return;
+		}
+
+		let cancelled = false;
+
+		void data.finances.then((finances) => {
+			if (cancelled || selectedAccountId !== bankId) return;
+
+			const accountIds = (finances.bankAccountDetails[bankId]?.accounts ?? []).map(
+				(account) => account.id
+			);
+
+			if (subAccountFilterBankId !== bankId) {
+				subAccountFilterBankId = bankId;
+				subAccountFilterEnabledIds = accountIds;
+			}
+		});
+
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -177,7 +208,10 @@
 					{#if !finances.accountBalancesError && finances.accounts.length > 0}
 						<FinanceAccountList
 							accounts={finances.accounts}
+							bankAccountDetails={finances.bankAccountDetails}
 							{selectedAccountId}
+							bind:subAccountFilterEnabledIds
+							subAccountMenuEnabled={financePanel === 'spending'}
 							onAccountSelect={selectAccount}
 							inline
 						/>
@@ -190,6 +224,7 @@
 					finances={data.finances}
 					bind:selectedAccountId
 					bind:spendingView
+					bind:subAccountFilterEnabledIds
 					panel={financePanel}
 					onViewSpending={showSpending}
 					class="w-full"
@@ -450,6 +485,8 @@
 	}
 
 	.finance-view__header {
+		position: relative;
+		z-index: 2;
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;

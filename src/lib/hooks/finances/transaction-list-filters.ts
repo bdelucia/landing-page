@@ -41,6 +41,16 @@ export function matchesTransactionSearch(
 	return haystack.includes(normalized);
 }
 
+export function filterTransactionsBySubAccounts(
+	transactions: TransactionItem[],
+	enabledAccountIds: readonly string[]
+): TransactionItem[] {
+	if (enabledAccountIds.length === 0) return [];
+
+	const enabled = new Set(enabledAccountIds);
+	return transactions.filter((transaction) => enabled.has(transaction.accountId));
+}
+
 export function sortTransactions(
 	transactions: TransactionItem[],
 	sort: SpendingTransactionSort
