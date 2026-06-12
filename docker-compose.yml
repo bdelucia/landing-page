@@ -18,6 +18,7 @@ services:
       PORT: '3000'
       SQLITE_DB_PATH: ${SQLITE_DB_PATH:-/app/database/finance.sqlite}
       BALANCE_LOG_CRON_TOKEN: ${BALANCE_LOG_CRON_TOKEN:-}
+      NEWS_SYNC_CRON_TOKEN: ${NEWS_SYNC_CRON_TOKEN:-}
       # Optional: set in project `.env` when using Tailscale Serve (see .env.docker.example)
       ORIGIN: ${ORIGIN:-}
       # Optional: only for local webhook testing — never set in production
