@@ -5,6 +5,7 @@
 		type ChartConfig
 	} from '$lib/components/ui/chart/chart-utils';
 	import {
+		contributionsAsOf,
 		investmentDisplayBalanceForDay,
 		investmentEarningsChange,
 		investmentStatsFromTimeline,
@@ -33,6 +34,7 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 
 	const CHART_LINE_TRANSITION_MS = 520;
+	const CONTRIBUTIONS_CHART_KEY = 'contributions';
 
 	const CHART_LINE_MOTION_ENABLED = {
 		type: 'tween',
@@ -75,12 +77,25 @@
 	let activeTimeRange = $state<ChartTimeRange>('ALL');
 
 	$effect(() => {
-		if (totalOnly || singleHeaderAccount) {
+		if (totalOnly) {
 			activeChart = 'total';
 			return;
 		}
 
-		if (activeChart !== 'total' && !accountKeys.includes(activeChart)) {
+		if (
+			singleHeaderAccount &&
+			activeChart !== 'total' &&
+			activeChart !== CONTRIBUTIONS_CHART_KEY
+		) {
+			activeChart = 'total';
+			return;
+		}
+
+		if (
+			activeChart !== 'total' &&
+			activeChart !== CONTRIBUTIONS_CHART_KEY &&
+			!accountKeys.includes(activeChart)
+		) {
 			activeChart = accountKeys[0] ?? 'total';
 		}
 	});
@@ -155,11 +170,36 @@
 		});
 	});
 
-	const chartDataForDisplay = $derived(
-		activeChart === 'total' ? totalChartData : filteredChartData
-	);
+	const contributionsChartData = $derived.by(() => {
+		const timeline = detail.investmentContributionTimeline;
+		if (!timeline) return [];
+
+		return filteredChartData.map((point) => ({
+			date: point.date,
+			sortDate: point.sortDate,
+			contributions: contributionsAsOf(point.sortDate, timeline)
+		}));
+	});
+
+	const chartDataForDisplay = $derived.by(() => {
+		if (activeChart === CONTRIBUTIONS_CHART_KEY) {
+			return contributionsChartData;
+		}
+
+		return activeChart === 'total' ? totalChartData : filteredChartData;
+	});
 
 	const activeSeries = $derived.by(() => {
+		if (activeChart === CONTRIBUTIONS_CHART_KEY) {
+			return [
+				{
+					key: CONTRIBUTIONS_CHART_KEY,
+					label: 'Contributions',
+					color: chartConfig.total?.color ?? TOTAL_BALANCE_CHART_COLOR
+				}
+			];
+		}
+
 		if (activeChart === 'total') {
 			return [
 				{
@@ -202,6 +242,22 @@
 		const timeline = detail.investmentContributionTimeline;
 		const getTotalValue = (point: (typeof totalChartData)[number]) =>
 			typeof point.total === 'number' ? point.total : chartPointTotal(point);
+
+		if (activeChart === CONTRIBUTIONS_CHART_KEY) {
+			const getContributions = (point: (typeof contributionsChartData)[number]) =>
+				point.contributions;
+
+			if (hoveredChartPoint) {
+				const endIndex = contributionsChartData.findIndex(
+					(point) => point.sortDate === hoveredChartPoint.sortDate
+				);
+				if (endIndex >= 0) {
+					return chartBalanceChange(contributionsChartData, getContributions, endIndex);
+				}
+			}
+
+			return chartBalanceChange(contributionsChartData, getContributions);
+		}
 
 		if (timeline && activeChart === 'total') {
 			if (hoveredChartPoint) {
@@ -250,6 +306,11 @@
 	const displayedTotalValue = $derived.by(() => {
 		const timeline = detail.investmentContributionTimeline;
 		const todayKey = currentChartDayKey();
+
+		if (activeChart === CONTRIBUTIONS_CHART_KEY && timeline) {
+			const sortDate = activeChartSortDate ?? todayKey;
+			return contributionsAsOf(sortDate, timeline);
+		}
 
 		if (hoveredChartPoint?.sortDate && timeline && isPreSnapshotSyntheticDay(hoveredChartPoint.sortDate, firstRealPlaidDay)) {
 			return preSnapshotSyntheticBalance(timeline);
@@ -347,6 +408,10 @@
 	const showAccountSelectors = $derived(!totalOnly && selectorItems.length > 1);
 
 	const activeSummaryLabel = $derived.by(() => {
+		if (activeChart === CONTRIBUTIONS_CHART_KEY) {
+			return 'Contributions';
+		}
+
 		if (activeChart === 'total') {
 			return summaryLabel;
 		}
@@ -438,7 +503,14 @@
 					{/if}
 
 					{#if displayedContributions != null}
-						<div class="chart-summary__stat" role="group" aria-label="Contributions">
+						<button
+							type="button"
+							class="chart-summary__stat"
+							data-active={activeChart === CONTRIBUTIONS_CHART_KEY}
+							aria-pressed={activeChart === CONTRIBUTIONS_CHART_KEY}
+							aria-label="Contributions"
+							onclick={() => selectChart(CONTRIBUTIONS_CHART_KEY)}
+						>
 							<p class="chart-summary__label">Contributions</p>
 							<p class="chart-summary__stat-value" aria-live="polite">
 								<AnimatedBalanceCounter
@@ -446,7 +518,7 @@
 									format={(amount) => balanceMoney.format(amount)}
 								/>
 							</p>
-						</div>
+						</button>
 					{/if}
 				</div>
 			{/if}
