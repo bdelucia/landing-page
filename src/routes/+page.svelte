@@ -9,6 +9,7 @@
 		type SpendingView
 	} from '$lib/components/transactions/TransactionList.svelte';
 	import FinanceAccountList from '$lib/components/finance/FinanceAccountList.svelte';
+	import NewsPanel from '$lib/components/news/NewsPanel.svelte';
 	import WeatherDisplay from '$lib/components/weather/WeatherDisplay.svelte';
 	import WeatherDisplaySkeleton from '$lib/components/weather/WeatherDisplaySkeleton.svelte';
 	import { quickLinks } from '$lib/hooks/links/quick-links';
@@ -17,7 +18,7 @@
 
 	let { data } = $props();
 
-	type PageView = 'home' | 'finance';
+	type PageView = 'home' | 'finance' | 'news';
 
 	const welcomeHeading = getWelcomeMessage();
 
@@ -73,6 +74,10 @@
 		spendingView = 'chart';
 	}
 
+	function showNews() {
+		activeView = 'news';
+	}
+
 	function showHome() {
 		activeView = 'home';
 		financePanel = 'overview';
@@ -125,7 +130,7 @@
 	);
 </script>
 
-<div class="page" class:page--finance={activeView === 'finance'}>
+<div class="page" class:page--finance={activeView !== 'home'}>
 	<div
 		class="weather-slot flex w-full justify-center lg:absolute lg:start-0 lg:top-0 lg:z-20 lg:w-auto lg:justify-start"
 		class:weather-slot--visible={activeView === 'home'}
@@ -176,14 +181,14 @@
 						Finances
 						<ArrowRightIcon class="section-link__icon" aria-hidden="true" />
 					</button>
-					<button type="button" class="section-link">
+					<button type="button" class="section-link" onclick={showNews}>
 						News
 						<ArrowRightIcon class="section-link__icon" aria-hidden="true" />
 					</button>
 				</div>
 			</div>
 		</div>
-	{:else}
+	{:else if activeView === 'finance'}
 		<div class="finance-view">
 			<button
 				type="button"
@@ -229,6 +234,28 @@
 					onViewSpending={showSpending}
 					class="w-full"
 				/>
+			</div>
+		</div>
+	{:else}
+		<div class="finance-view">
+			<button
+				type="button"
+				class="finance-view__enter section-link section-link--back self-start"
+				style="--enter-index: 0"
+				onclick={showHome}
+			>
+				<ArrowLeftIcon class="section-link__icon" aria-hidden="true" />
+				Home
+			</button>
+
+			<div class="finance-view__enter finance-view__header" style="--enter-index: 1">
+				<div class="finance-view__title-wrap">
+					<h1 class="finance-view__title finance-view__title--enter">News</h1>
+				</div>
+			</div>
+
+			<div class="finance-view__enter finance-view__body" style="--enter-index: 2">
+				<NewsPanel news={data.news} class="w-full" />
 			</div>
 		</div>
 	{/if}

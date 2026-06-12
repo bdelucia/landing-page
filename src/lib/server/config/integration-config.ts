@@ -1,8 +1,11 @@
 import type {
 	ApiSecrets,
+	NewsApiOrgConfig,
 	OpenWeatherConfig,
 	PlaidConfig,
-	PlaidLinkedItem
+	PlaidLinkedItem,
+	RawgConfig,
+	SteamGridDbConfig
 } from '$data/api-config.types';
 
 function hasValue(value: string | undefined): value is string {
@@ -44,4 +47,24 @@ export function getPlaidLinkedItems(plaid: PlaidConfig): PlaidLinkedItem[] {
 /** Plaid transaction endpoints need at least one stored access token */
 export function isPlaidLinked(secrets: ApiSecrets): secrets is ApiSecrets & { plaid: PlaidConfig } {
 	return isPlaidConfigured(secrets) && getPlaidLinkedItems(secrets.plaid).length > 0;
+}
+
+export function getNewsApiConfig(secrets: ApiSecrets): NewsApiOrgConfig | null {
+	const config = secrets.news?.newsApi;
+	return config && hasValue(config.apiKey) ? config : null;
+}
+
+export function getRawgConfig(secrets: ApiSecrets): RawgConfig | null {
+	const config = secrets.news?.rawg;
+	return config && hasValue(config.apiKey) ? config : null;
+}
+
+export function getSteamGridDbConfig(secrets: ApiSecrets): SteamGridDbConfig | null {
+	const config = secrets.news?.steamGridDb;
+	return config && hasValue(config.apiKey) ? config : null;
+}
+
+/** Hacker News needs no key — presence of the config object enables it. */
+export function isHackerNewsEnabled(secrets: ApiSecrets): boolean {
+	return !!secrets.news?.hackerNews;
 }

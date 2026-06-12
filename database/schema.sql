@@ -102,3 +102,22 @@ CREATE TABLE IF NOT EXISTS app_metadata (
 	key TEXT PRIMARY KEY,
 	value TEXT NOT NULL
 );
+
+-- News articles synced by the news cron job (AI / gaming releases / local)
+CREATE TABLE IF NOT EXISTS news_articles (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	category TEXT NOT NULL, -- 'ai' | 'gaming' | 'local'
+	external_id TEXT NOT NULL, -- stable id from the source API, used for dedupe
+	title TEXT NOT NULL,
+	url TEXT NOT NULL,
+	source TEXT,
+	summary TEXT,
+	image_url TEXT,
+	published_at TEXT NOT NULL, -- ISO timestamp (release date for games, may be in the future)
+	extra TEXT, -- JSON blob for category-specific fields (platforms, release date, …)
+	fetched_at TEXT NOT NULL DEFAULT (datetime('now')),
+	UNIQUE (category, external_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_articles_category_published
+	ON news_articles (category, published_at);

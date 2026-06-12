@@ -14,7 +14,8 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"deploy": "docker compose build --no-cache && docker compose up -d",
-		"update-balances": "sh scripts/run-balance-log.sh"
+		"update-balances": "sh scripts/run-balance-log.sh",
+		"sync-news": "sh scripts/run-news-sync.sh"
 	},
 	"devDependencies": {
 		"@eslint/compat": "latest",

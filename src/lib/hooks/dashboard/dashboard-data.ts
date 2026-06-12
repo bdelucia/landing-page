@@ -3,6 +3,8 @@ import type { BankAccountDetailsByItem } from '$lib/hooks/finances/bank-accounts
 import type { TransactionItem } from '$lib/hooks/finances/transactions';
 import type { WeatherDisplay } from '$lib/hooks/weather/weather';
 
+export type { DashboardNews } from '$lib/hooks/news/news';
+
 export type DashboardWeather = {
 	weather: WeatherDisplay | null;
 	weatherError: string | null;

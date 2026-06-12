@@ -5,7 +5,11 @@ export { apiSecrets };
 export type { ApiSecrets };
 
 export {
+	getNewsApiConfig,
 	getPlaidLinkedItems,
+	getRawgConfig,
+	getSteamGridDbConfig,
+	isHackerNewsEnabled,
 	isOpenWeatherConfigured,
 	isPlaidConfigured,
 	isPlaidLinked,

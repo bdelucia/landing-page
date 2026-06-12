@@ -14,6 +14,7 @@ Edit `src/data/secrets.local.ts` with your keys. That file is **gitignored** so 
 
 - **`openWeather`** — `apiKey` (needs [One Call 3.0](https://openweathermap.org/api/one-call-3) subscription), `zipCode`, `countryCode` (ISO alpha-2), `units` (`metric` | `imperial` | `standard`)
 - **`plaid`** — `clientId`, `secret`, `environment`, `accessToken` (one linked institution; all accounts under it), optional `itemId`, or `items[]` for multiple banks (each with `accessToken` and optional `label`)
+- **`news`** — one optional source per News category: `hackerNews` (AI stories via the keyless [Hacker News Firebase API](https://github.com/HackerNews/API); `{}` enables it), `rawg` (game releases, key from [rawg.io/apidocs](https://rawg.io/apidocs)), `steamGridDb` (game cover art, key from [SteamGridDB](https://www.steamgriddb.com/profile/preferences/api)), `newsApi` (Arizona headlines, key from [newsapi.org](https://newsapi.org/account))
 
 Import secrets from `$lib/server/config/secrets` in `+server.ts` / `+page.server.ts` only — not from `.svelte` files. Use `isOpenWeatherConfigured`, `isPlaidConfigured`, and `isPlaidLinked` before calling each API.
 
@@ -50,3 +51,14 @@ pnpm run deploy
 ```
 
 The app binds to `127.0.0.1:${HOST_PORT:-3001}` on the host. SQLite data persists in `./database/`. Table definitions live in [`database/schema.sql`](database/schema.sql); the app also creates them on first run. Use `pnpm update-balances` (or cron + `scripts/run-balance-log.sh`) to refresh balances when webhooks are unavailable.
+
+## News sync (cron)
+
+The News view reads articles from SQLite. A sync pulls AI stories (Hacker News), game releases (RAWG + SteamGridDB art), and Arizona headlines (NewsAPI) into the `news_articles` table. Set `NEWS_SYNC_CRON_TOKEN` in `.env`, then run `pnpm sync-news` manually or schedule it on the Pi:
+
+```sh
+# crontab -e — every 30 minutes
+*/30 * * * * /home/pi/landing-page/scripts/run-news-sync.sh >> /home/pi/news-sync.log 2>&1
+```
+
+If the table is empty or stale (no cron yet), the page lazily syncs once on load, so local dev works without any scheduling.

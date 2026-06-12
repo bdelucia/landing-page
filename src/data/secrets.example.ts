@@ -31,4 +31,24 @@ export const apiSecrets: ApiSecrets = {
 	// 	Robinhood: 0
 	// },
 	// investmentTrackingStartDate: '2026-06-08' // optional fallback if no snapshots yet
+	// news: {
+	// 	// Local (Arizona) headlines — https://newsapi.org/account
+	// 	newsApi: {
+	// 		apiKey: '',
+	// 		query: '"Arizona" OR "Phoenix"' // optional; defaults to this
+	// 	},
+	// 	// Game releases — https://rawg.io/apidocs
+	// 	rawg: {
+	// 		apiKey: ''
+	// 	},
+	// 	// Game cover art — https://www.steamgriddb.com/profile/preferences/api
+	// 	steamGridDb: {
+	// 		apiKey: ''
+	// 	},
+	// 	// AI stories from Hacker News (Firebase API) — keyless, `{}` enables it
+	// 	hackerNews: {
+	// 		// keywords: ['AI', 'LLM', 'OpenAI'], // optional; defaults to a built-in list
+	// 		// maxStories: 150 // optional; top stories scanned per sync
+	// 	}
+	// }
 };

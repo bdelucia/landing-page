@@ -84,9 +84,7 @@ function migrateLegacyDatabaseIfNeeded(dbPath: string): void {
 function countDistinctSnapshotDays(db: DatabaseSync, tableName: string): number {
 	try {
 		const row = db
-			.prepare(
-				`SELECT COUNT(DISTINCT substr(snapshot_time, 1, 10)) AS dayCount FROM ${tableName}`
-			)
+			.prepare(`SELECT COUNT(DISTINCT substr(snapshot_time, 1, 10)) AS dayCount FROM ${tableName}`)
 			.get() as { dayCount: number };
 
 		return row.dayCount ?? 0;
@@ -275,6 +273,30 @@ function ensureProcessedTransactionDateColumn(db: DatabaseSync): void {
 	db.exec(`ALTER TABLE investment_processed_transactions ADD COLUMN transaction_date TEXT`);
 }
 
+export const NEWS_ARTICLES_TABLE = 'news_articles';
+
+function ensureNewsTable(db: DatabaseSync): void {
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS ${NEWS_ARTICLES_TABLE} (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			category TEXT NOT NULL,
+			external_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			url TEXT NOT NULL,
+			source TEXT,
+			summary TEXT,
+			image_url TEXT,
+			published_at TEXT NOT NULL,
+			extra TEXT,
+			fetched_at TEXT NOT NULL DEFAULT (datetime('now')),
+			UNIQUE (category, external_id)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_news_articles_category_published
+			ON ${NEWS_ARTICLES_TABLE} (category, published_at);
+	`);
+}
+
 function ensureSchema(db: DatabaseSync): void {
 	ensureBalanceSnapshotTable(db, ACCOUNT_BALANCE_SNAPSHOTS_TABLE, 'account_balance_snapshots');
 	ensureBalanceSnapshotTable(
@@ -283,6 +305,7 @@ function ensureSchema(db: DatabaseSync): void {
 		'account_balance_snapshots_dummy'
 	);
 	ensureInvestmentTables(db);
+	ensureNewsTable(db);
 }
 
 export function getDatabase(): DatabaseSync {
