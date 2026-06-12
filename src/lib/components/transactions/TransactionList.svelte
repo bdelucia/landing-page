@@ -6,6 +6,7 @@
 		type BankAccountItem
 	} from '$lib/hooks/finances/bank-accounts';
 	import type { DashboardFinances } from '$lib/hooks/dashboard/dashboard-data';
+	import { prepareSpendingTransactions } from '$lib/hooks/finances/paypal-pay-in-4-filters';
 	import { isSpendingTransaction, type TransactionItem } from '$lib/hooks/finances/transactions';
 	import {
 		filterTransactionsBySpendingRange,
@@ -122,6 +123,7 @@
 		}
 
 		if (spendingOnly) {
+			pool = prepareSpendingTransactions(pool);
 			pool = pool.filter((transaction) => isSpendingTransaction(transaction));
 		}
 

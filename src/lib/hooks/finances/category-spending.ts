@@ -1,4 +1,5 @@
 import { formatUsdBalance } from '$lib/hooks/finances/account-balances';
+import { prepareSpendingTransactions } from '$lib/hooks/finances/paypal-pay-in-4-filters';
 import { filterTransactionsBySubAccounts } from '$lib/hooks/finances/transaction-list-filters';
 import { isSpendingTransaction, type TransactionItem } from '$lib/hooks/finances/transactions';
 
@@ -55,6 +56,8 @@ export function buildCategorySpending(
 	if (selectedAccountId && allSubAccountIds.length > 1) {
 		pool = filterTransactionsBySubAccounts(pool, enabledSubAccountIds);
 	}
+
+	pool = prepareSpendingTransactions(pool);
 
 	const totals = new Map<string, number>();
 
