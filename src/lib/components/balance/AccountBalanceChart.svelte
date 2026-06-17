@@ -762,4 +762,35 @@
 		outline-offset: 2px;
 		border-radius: var(--radius-sm);
 	}
+
+	/*
+	 * Narrow widths: the account breakdown columns no longer fit beside the total
+	 * balance, so stack them underneath and lay the accounts out two-per-row. A 3rd
+	 * account then wraps onto a new line instead of overflowing into the total.
+	 */
+	@media (max-width: 520px) {
+		.chart-summary {
+			flex-direction: column;
+			gap: 1rem;
+		}
+
+		.chart-summary__stats {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			width: 100%;
+			justify-content: flex-start;
+			gap: 1rem 1.5rem;
+		}
+
+		/* Hoist the per-account stats into the parent grid so they share its columns
+		   with the contributions stat and wrap together two-per-row. */
+		.chart-summary__stats-group {
+			display: contents;
+		}
+
+		.chart-summary__stat {
+			align-items: flex-start;
+			text-align: start;
+		}
+	}
 </style>

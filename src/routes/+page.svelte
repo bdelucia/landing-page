@@ -148,7 +148,7 @@
 	</div>
 
 	{#if activeView === 'home'}
-		<div class="home-hub mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-3xl items-center justify-center py-8">
+		<div class="home-hub mx-auto flex w-full max-w-3xl items-center justify-center py-8">
 			<div class="home-hub__stack flex w-full flex-col items-center">
 				<h1 class="home-hub__greeting text-primary text-center text-3xl font-medium sm:text-4xl">
 					{welcomeHeading}
@@ -269,6 +269,10 @@
 <style>
 	.page {
 		position: relative;
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		min-height: 0;
 		width: 100%;
 	}
 
@@ -569,6 +573,58 @@
 
 		.finance-view__title {
 			font-size: 2.25rem;
+		}
+	}
+
+	/* Mobile: finance/news views fill the screen and scroll as a single container */
+	@media (max-width: 639px) {
+		.page--finance {
+			overflow: visible;
+		}
+
+		.finance-view {
+			--finance-view-scrollbar-thumb: var(--color-secondary);
+
+			flex: 0 0 auto;
+			width: auto;
+			max-width: none;
+			height: 100dvh;
+			max-height: none;
+			/* Offset the layout's 2rem content padding so the view reaches every edge */
+			margin: -2rem;
+			border-radius: 0;
+			overflow-x: hidden;
+			overflow-y: auto;
+			scrollbar-gutter: stable;
+			scrollbar-width: thin;
+			scrollbar-color: var(--finance-view-scrollbar-thumb) transparent;
+		}
+
+		.finance-view::-webkit-scrollbar {
+			width: 4px;
+		}
+
+		.finance-view::-webkit-scrollbar-track {
+			margin-block: 0.125rem;
+			background: transparent;
+		}
+
+		.finance-view::-webkit-scrollbar-thumb {
+			border-radius: var(--radius-full);
+			background-color: var(--finance-view-scrollbar-thumb);
+		}
+
+		.finance-view__body {
+			flex: 0 0 auto;
+			min-height: auto;
+			overflow: visible;
+		}
+
+		.finance-view :global(.finance-panel),
+		.finance-view :global(.news-panel) {
+			flex: 0 0 auto;
+			min-height: auto;
+			overflow: visible;
 		}
 	}
 

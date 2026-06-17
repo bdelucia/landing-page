@@ -917,4 +917,21 @@
 	.finance-panel__amount--income {
 		color: var(--color-income);
 	}
+
+	/* Mobile: release the panel's internal scroll so the whole view scrolls as one */
+	@media (max-width: 639px) {
+		.finance-panel,
+		.finance-panel__transactions {
+			flex: 0 0 auto;
+			min-height: auto;
+			overflow: visible;
+		}
+
+		.finance-panel__transaction-list-container {
+			flex: 0 0 auto;
+			min-height: auto;
+			overflow: visible;
+			padding-inline-end: 0;
+		}
+	}
 </style>

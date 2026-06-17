@@ -581,4 +581,21 @@
 			transition: none;
 		}
 	}
+
+	/* Mobile: release the panel's internal scroll so the whole view scrolls as one */
+	@media (max-width: 639px) {
+		.news-panel,
+		.news-panel__content {
+			flex: 0 0 auto;
+			min-height: auto;
+			overflow: visible;
+		}
+
+		.news-panel__list-container {
+			flex: 0 0 auto;
+			min-height: auto;
+			overflow: visible;
+			padding-inline-end: 0;
+		}
+	}
 </style>

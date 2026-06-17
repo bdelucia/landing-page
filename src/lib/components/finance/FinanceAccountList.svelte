@@ -211,6 +211,23 @@
 		gap: 0.375rem 1rem;
 	}
 
+	/* At 739px and below the bank names move onto their own full-width row below the
+	   title, left-aligned and flowing in a single row. */
+	@media (max-width: 739px) {
+		.finance-accounts-wrap--inline {
+			width: 100%;
+			margin-inline-start: 0;
+		}
+
+		.finance-accounts--inline {
+			justify-content: flex-start;
+		}
+
+		.finance-accounts--inline .finance-accounts__list {
+			justify-content: flex-start;
+		}
+	}
+
 	.finance-accounts__item-wrap {
 		position: relative;
 	}
