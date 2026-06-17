@@ -8,6 +8,12 @@ import { createPlaidClient, formatPlaidApiError } from '$lib/server/plaid/plaid'
 import type { PlaidConfig, PlaidLinkedItem } from '$data/api-config.types';
 import type { TransactionIcon, TransactionItem } from '$lib/hooks/finances/transactions';
 import { spendingTransactionFetchStartDayKey } from '$lib/hooks/finances/spending-time-range';
+import {
+	addDaysToDayKey,
+	CHART_TIME_ZONE,
+	currentChartDayKey,
+	formatChartDayLabel
+} from '$lib/hooks/chart/chart-date';
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -19,9 +25,8 @@ function transactionFetchStartDate(): string {
 }
 
 function toDateString(daysAgo: number): string {
-	const d = new Date();
-	d.setDate(d.getDate() - daysAgo);
-	return d.toISOString().slice(0, 10);
+	const todayKey = currentChartDayKey();
+	return daysAgo === 0 ? todayKey : addDaysToDayKey(todayKey, -daysAgo);
 }
 
 function toTitleCase(value: string): string {
@@ -74,28 +79,24 @@ function categoryIcon(category: string): TransactionIcon {
 	return 'default';
 }
 
-function startOfDay(date: Date): Date {
-	return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
 function formatTransactionDate(dateStr: string, datetimeStr?: string | null): string {
-	const posted = startOfDay(new Date(`${dateStr}T12:00:00`));
-	const today = startOfDay(new Date());
-	const diffDays = Math.round((today.getTime() - posted.getTime()) / 86_400_000);
+	const todayKey = currentChartDayKey();
 
-	if (diffDays === 0) {
+	if (dateStr === todayKey) {
 		if (datetimeStr) {
 			const time = new Date(datetimeStr).toLocaleTimeString('en-US', {
 				hour: 'numeric',
-				minute: '2-digit'
+				minute: '2-digit',
+				timeZone: CHART_TIME_ZONE
 			});
 			return `Today, ${time}`;
 		}
 		return 'Today';
 	}
-	if (diffDays === 1) return 'Yesterday';
 
-	return posted.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+	if (dateStr === addDaysToDayKey(todayKey, -1)) return 'Yesterday';
+
+	return formatChartDayLabel(dateStr);
 }
 
 function transactionSortKey(transaction: Transaction): string {
@@ -347,7 +348,7 @@ export async function fetchRecentTransactions(count = 12): Promise<FetchTransact
 	}
 
 	const { plaid } = apiSecrets;
-	const cacheKey = `plaid-transactions:v7:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
+	const cacheKey = `plaid-transactions:v8:${plaid.environment}:${count}:${getPlaidLinkedItems(plaid)
 		.map((item) => item.itemId ?? item.accessToken)
 		.join(',')}`;
 
