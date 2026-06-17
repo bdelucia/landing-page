@@ -12,9 +12,9 @@ export type QuickLinkItem = {
 };
 
 export const quickLinks: QuickLinkItem[] = [
-	{ href: 'https://gemini.google.com', icon: geminiIcon, ariaLabel: 'Gemini', external: true },
-	{ href: 'https://mail.google.com', icon: gmailIcon, ariaLabel: 'Gmail', external: true },
-	{ href: 'https://github.com', icon: githubIcon, ariaLabel: 'GitHub', external: true },
-	{ href: 'https://www.youtube.com', icon: youtubeIcon, ariaLabel: 'YouTube', external: true },
-	{ href: 'https://www.reddit.com', icon: redditIcon, ariaLabel: 'Reddit', external: true }
+	{ href: 'https://gemini.google.com', icon: geminiIcon, ariaLabel: 'Gemini' },
+	{ href: 'https://mail.google.com', icon: gmailIcon, ariaLabel: 'Gmail' },
+	{ href: 'https://github.com', icon: githubIcon, ariaLabel: 'GitHub' },
+	{ href: 'https://www.youtube.com', icon: youtubeIcon, ariaLabel: 'YouTube' },
+	{ href: 'https://www.reddit.com', icon: redditIcon, ariaLabel: 'Reddit' }
 ];
