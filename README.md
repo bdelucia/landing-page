@@ -1,6 +1,25 @@
 # landing-page
 
-Personal SvelteKit landing page with Plaid balances, weather, and quick links.
+A SvelteKit landing page I made for myself. 
+- Hosted on a Raspberry Pi 5 using Docker and Tailscale.
+- Using Plaid webhooks, RAWG.io, newsAPI, hackernews and SteamGridDB APIs. 
+- Gemini search uses [Gemini URL Search](https://addons.mozilla.org/en-US/firefox/addon/gemini-url-search/), instead of a Gemini API key to take advantage of Gemini's Personalization feature.
+
+# Pages
+
+## Homepage
+<img width="1910" height="907" alt="image" src="https://github.com/user-attachments/assets/2c958999-a6f0-4776-99c9-4a81f3989bc6" />
+
+## Finances
+<img width="1910" height="907" alt="image" src="https://github.com/user-attachments/assets/6e3edbcf-d8e4-45c4-8a88-20556ac1080a" />
+<img width="1910" height="907" alt="image" src="https://github.com/user-attachments/assets/2c916780-26af-4d6f-b1ca-a736c15ec80c" />
+<img width="1906" height="911" alt="image" src="https://github.com/user-attachments/assets/e6c2111d-968f-46c8-8e4c-8b27fda889bf" />
+
+## News
+<img width="1909" height="911" alt="image" src="https://github.com/user-attachments/assets/a5ab2267-5d04-4d77-8c62-92408fd05077" />
+
+# Setup
+If you want to clone this repo to make a similar landing page, here's how you do it!
 
 ## Secrets (local config)
 
