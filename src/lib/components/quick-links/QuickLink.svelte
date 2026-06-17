@@ -2,26 +2,29 @@
 	type Props = {
 		/** Destination URL */
 		href: string;
-		/** Local SVG/PNG import, e.g. `import icon from '$lib/assets/foo.svg'` */
-		icon: string;
 		/** Accessible name shown below the icon */
 		ariaLabel: string;
+		/** Local image import, e.g. `import icon from '$lib/assets/foo.png'` */
+		icon?: string;
 		/** Opens in a new tab with `noopener noreferrer` */
 		external?: boolean;
 		class?: string;
 	};
 
-	let { href, icon, ariaLabel, external = false, class: className = '' }: Props = $props();
+	let { href, ariaLabel, icon, external = false, class: className = '' }: Props = $props();
 </script>
 
-<a
-	{href}
+<!-- Quick links point to external, absolute URLs, so SvelteKit's resolve() does not apply. -->
+<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+<a {href}
 	class="quick-link focus-visible:outline-focus inline-flex shrink-0 flex-col items-center rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 {className}"
 	target={external ? '_blank' : undefined}
 	rel={external ? 'noopener noreferrer' : undefined}
 >
 	<span class="quick-link__icon-box shadow-lg">
-		<img src={icon} alt="" class="quick-link__icon" aria-hidden="true" />
+		{#if icon}
+			<img src={icon} alt="" class="quick-link__icon" aria-hidden="true" />
+		{/if}
 	</span>
 	<span class="quick-link__label">{ariaLabel}</span>
 </a>
@@ -58,10 +61,5 @@
 		font-size: clamp(0.625rem, 0.5rem + 0.35vw, 0.75rem);
 		line-height: 1;
 		color: var(--color-primary);
-	}
-
-	a :global(svg) {
-		width: clamp(1.75rem, 1.25rem + 3vw, 2.5rem);
-		height: clamp(1.75rem, 1.25rem + 3vw, 2.5rem);
 	}
 </style>

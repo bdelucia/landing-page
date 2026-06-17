@@ -3,7 +3,7 @@
 	import { sendToGemini } from '$lib/hooks/gemini/send-to-gemini';
 	import { getWelcomeMessage } from '$lib/hooks/greeting/time-of-day-greeting';
 	import { Input, InputIcon, InputSubmit } from '$lib/components/input/index.js';
-	import QuickLink from '$lib/components/quick-links/QuickLink.svelte';
+	import QuickLinkFolder from '$lib/components/quick-links/QuickLinkFolder.svelte';
 	import TransactionList, {
 		type FinancePanel,
 		type SpendingView
@@ -12,7 +12,7 @@
 	import NewsPanel from '$lib/components/news/NewsPanel.svelte';
 	import WeatherDisplay from '$lib/components/weather/WeatherDisplay.svelte';
 	import WeatherDisplaySkeleton from '$lib/components/weather/WeatherDisplaySkeleton.svelte';
-	import { quickLinks } from '$lib/hooks/links/quick-links';
+	import { quickLinkFolders } from '$lib/hooks/links/quick-links';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
@@ -165,13 +165,18 @@
 					</Input>
 				</form>
 
-				<nav class="quick-links flex w-full items-center justify-between" aria-label="Quick links">
-					{#each quickLinks as link (link.href)}
-						<QuickLink
-							href={link.href}
-							icon={link.icon}
-							ariaLabel={link.ariaLabel}
-							external={link.external}
+				<nav
+					class="quick-links flex w-full items-start justify-between"
+					aria-label="Quick link folders"
+				>
+					{#each quickLinkFolders as folder, index (folder.id)}
+						<QuickLinkFolder
+							{folder}
+							align={index === 0
+								? 'start'
+								: index === quickLinkFolders.length - 1
+									? 'end'
+									: 'center'}
 						/>
 					{/each}
 				</nav>
