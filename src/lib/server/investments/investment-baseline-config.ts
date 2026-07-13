@@ -55,5 +55,5 @@ export function isAfterTrackingStart(
 		return false;
 	}
 
-	return transactionDate > trackingStartDate;
+	return transactionDate >= trackingStartDate;
 }

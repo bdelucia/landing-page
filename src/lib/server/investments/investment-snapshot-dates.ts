@@ -4,6 +4,7 @@ import {
 	ACCOUNT_BALANCE_SNAPSHOTS_TABLE,
 	getDatabase
 } from '$lib/server/db/database';
+import type { PlaidConfig } from '$data/api-config.types';
 
 type SnapshotTableName =
 	| typeof ACCOUNT_BALANCE_SNAPSHOTS_TABLE
@@ -37,4 +38,9 @@ export function fetchEarliestSnapshotDate(
 
 export function snapshotTableForEnvironment(useDummyData: boolean): SnapshotTableName {
 	return useDummyData ? ACCOUNT_BALANCE_SNAPSHOTS_DUMMY_TABLE : ACCOUNT_BALANCE_SNAPSHOTS_TABLE;
+}
+
+/** Matches balance charts: sandbox reads dummy snapshots, production reads real Plaid history. */
+export function useDummyDataForPlaid(plaid: PlaidConfig): boolean {
+	return plaid.environment === 'sandbox';
 }

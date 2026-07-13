@@ -147,7 +147,7 @@ export async function recordPlaidBalanceSnapshotForItem(
 
 		if (inserted > 0) {
 			await syncInvestmentContributions(plaid);
-			recordInvestmentHistoryFromSnapshotRows(rows);
+			recordInvestmentHistoryFromSnapshotRows(rows, plaid);
 		}
 
 		return {
@@ -264,7 +264,7 @@ export async function recordPlaidBalanceSnapshot(
 			console.error(`[investment-sync] ${error}`);
 		}
 
-		recordInvestmentHistoryFromSnapshotRows(rows);
+		recordInvestmentHistoryFromSnapshotRows(rows, plaid);
 	}
 
 	return {

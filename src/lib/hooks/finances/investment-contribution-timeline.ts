@@ -29,7 +29,7 @@ export function contributionsAsOf(
 	sortDate: string,
 	timeline: InvestmentContributionTimeline
 ): number {
-	if (timeline.trackingStartDate && sortDate <= timeline.trackingStartDate) {
+	if (timeline.trackingStartDate && sortDate < timeline.trackingStartDate) {
 		return timeline.baseline;
 	}
 

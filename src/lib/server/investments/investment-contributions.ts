@@ -20,6 +20,7 @@ import {
 	resolveInvestmentTrackingStartDate,
 	isAfterTrackingStart
 } from '$lib/server/investments/investment-baseline-config';
+import { useDummyDataForPlaid } from '$lib/server/investments/investment-snapshot-dates';
 import {
 	classifyInvestmentTransaction,
 	findDividendReinvestmentPairs
@@ -102,7 +103,7 @@ function sumContributionDeltas(itemLabel: string, trackingStartDate: string | nu
 			SELECT COALESCE(SUM(contribution_delta), 0) AS totalDelta
 			FROM ${INVESTMENT_PROCESSED_TRANSACTIONS_TABLE}
 			WHERE plaid_item_label = ?
-				AND transaction_date > ?
+				AND transaction_date >= ?
 		`
 		)
 		.get(trimmedLabel, trackingStartDate) as { totalDelta: number };
@@ -198,7 +199,8 @@ async function syncContributionsForItem(plaid: PlaidConfig, item: PlaidLinkedIte
 		return 0;
 	}
 
-	const trackingStartDate = resolveInvestmentTrackingStartDate(itemLabel, false);
+	const useDummyData = useDummyDataForPlaid(plaid);
+	const trackingStartDate = resolveInvestmentTrackingStartDate(itemLabel, useDummyData);
 	if (!trackingStartDate) {
 		storeContributionTotal(itemLabel, baseline);
 		return 0;
@@ -207,7 +209,7 @@ async function syncContributionsForItem(plaid: PlaidConfig, item: PlaidLinkedIte
 	clearProcessedTransactions(itemLabel);
 
 	const transactions = (await fetchInvestmentTransactions(plaid, item)).filter((transaction) =>
-		isAfterTrackingStart(transaction.date, itemLabel, false)
+		isAfterTrackingStart(transaction.date, itemLabel, useDummyData)
 	);
 	const reinvestmentPairs = findDividendReinvestmentPairs(transactions);
 	let applied = 0;
@@ -272,7 +274,11 @@ function upsertInvestmentHistory(
 	);
 }
 
-function recordInvestmentHistoryForRows(rows: LatestSnapshotRow[], snapshotTime: string): void {
+function recordInvestmentHistoryForRows(
+	rows: LatestSnapshotRow[],
+	snapshotTime: string,
+	useDummyData: boolean
+): void {
 	const historyDate = isoInstantToDayKey(snapshotTime);
 	const timelinesByLabel = new Map<string, InvestmentContributionTimeline>();
 
@@ -281,7 +287,7 @@ function recordInvestmentHistoryForRows(rows: LatestSnapshotRow[], snapshotTime:
 
 		const timeline =
 			timelinesByLabel.get(row.itemLabel) ??
-			loadInvestmentContributionTimeline(row.itemLabel, false) ??
+			loadInvestmentContributionTimeline(row.itemLabel, useDummyData) ??
 			null;
 
 		if (timeline) {
@@ -313,7 +319,7 @@ export type SyncInvestmentContributionsResult = {
 export async function syncInvestmentContributions(
 	plaid: PlaidConfig = apiSecrets.plaid!
 ): Promise<SyncInvestmentContributionsResult> {
-	if (!isPlaidLinked(apiSecrets) || plaid.environment === 'sandbox') {
+	if (!isPlaidLinked(apiSecrets)) {
 		ensureBaselineTotals();
 		return { processedTransactions: 0, errors: [] };
 	}
@@ -350,7 +356,8 @@ export function recordInvestmentHistoryFromSnapshotRows(
 		accountId: string;
 		balanceCurrent: number | null;
 		balanceAvailable: number | null;
-	}>
+	}>,
+	plaid: PlaidConfig = apiSecrets.plaid!
 ): void {
 	ensureBaselineTotals();
 
@@ -367,7 +374,8 @@ export function recordInvestmentHistoryFromSnapshotRows(
 			balanceCurrent: row.balanceCurrent,
 			balanceAvailable: row.balanceAvailable
 		})),
-		rows[0]?.snapshotTime ?? new Date().toISOString()
+		rows[0]?.snapshotTime ?? new Date().toISOString(),
+		useDummyDataForPlaid(plaid)
 	);
 }
 
@@ -400,7 +408,7 @@ export function loadInvestmentContributionTimeline(
 			WHERE plaid_item_label = ?
 				AND contribution_delta != 0
 				AND transaction_date IS NOT NULL
-				AND transaction_date > ?
+				AND transaction_date >= ?
 			ORDER BY transaction_date ASC, investment_transaction_id ASC
 		`
 				)
@@ -442,7 +450,7 @@ function buildContributionTimelineSteps(
 	for (const [sortDate, delta] of [...deltasByDate.entries()].sort(([left], [right]) =>
 		left.localeCompare(right)
 	)) {
-		if (trackingStartDate && sortDate <= trackingStartDate) {
+		if (trackingStartDate && sortDate < trackingStartDate) {
 			continue;
 		}
 
