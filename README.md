@@ -5,15 +5,22 @@ Heavily vibe-coded.
 Uses my Linux rice palette (find it [here](https://github.com/bdelucia/HyprPanel-Config-Files))
 
 ## More about it:
-- **Auth:** Hosted on a Raspberry Pi 5 using Docker and Tailscale. Tailscale makes it so only devices connected on the same Tailscale network can view the website. Tailscale is basically my auth for this website.
+- **Auth:** Hosted on a Raspberry Pi 5 using Docker and Tailscale.
+  
+  Tailscale makes it so only devices connected on the same Tailscale network can view the website. Tailscale is basically my auth for this website.
 - **APIs:** Using Plaid webhooks, RAWG.io, newsAPI, hackernews and SteamGridDB APIs.
-- **AI integration:** Gemini search uses the [Gemini URL Search](https://addons.mozilla.org/en-US/firefox/addon/gemini-url-search/) extension, instead of a Gemini API key. This takes advantage of Gemini's Personalization feature, as well as making sure I don't have to worry about API token usage/payments.
-- **Database:** Uses SQLite for the database. Dev database is in /database and prod is on my Raspberry Pi.
-- **Cron jobs:** Investment accounts are fetched with a cron job that runs 4 times a day so free Plaid API usage isn't exceeded.
+
+  All data from APIs are stored in the SQLite database, so I only have to wait on the database fetch, and not the API fetch. Webhooks and cron-jobs call the APIs.
+- **AI integration:** Gemini search uses the [Gemini URL Search](https://addons.mozilla.org/en-US/firefox/addon/gemini-url-search/) extension, instead of a Gemini API key.
+  
+  This takes advantage of Gemini's Personalization feature, as well as making sure I don't have to worry about API token usage/payments.
+- **Database:** Uses SQLite for the database.
+  
+  Supports dev & prod env-switching. Dev database is in /database and prod is on my Raspberry Pi.
 
 # Pages
 
-As this is a locally hosted website, I unfortunately can't give out a public link. Here are some screens from the dev server (using fake data points):
+As this is a locally hosted website, I unfortunately can't give out a public link. Here are some screenshots from the dev server (using fake data points):
 
 ## Homepage
 
