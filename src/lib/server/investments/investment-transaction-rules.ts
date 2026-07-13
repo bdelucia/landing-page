@@ -63,14 +63,43 @@ export function isBankCashMovement(transaction: InvestmentTransaction): boolean 
 /**
  * Fidelity splits each payroll deposit across multiple funds. Every fund line is
  * named "... - contribution". DFA fund rows include a security_id; FID rows do not.
+ * Plaid may also report the same deposit with subtype `deposit` or `contribution`.
  */
 export function isFidelityContributionMovement(transaction: InvestmentTransaction): boolean {
 	const name = normalizedText(transaction.name);
-	if (!name.includes('contribution')) {
+	const subtype = normalizedText(transaction.subtype);
+
+	if (name.includes('contribution') && transaction.type === 'cash') {
+		return subtype === 'withdrawal' || subtype === 'deposit' || subtype === 'contribution';
+	}
+
+	return transaction.type === 'cash' && (subtype === 'deposit' || subtype === 'contribution');
+}
+
+/** External cash deposited into a Fidelity account (not dividends, trades, or fees). */
+export function isFidelityDepositMovement(transaction: InvestmentTransaction): boolean {
+	if (isFidelityEarningsActivity(transaction)) {
 		return false;
 	}
 
-	return transaction.type === 'cash' && transaction.subtype === 'withdrawal';
+	if (isFidelityContributionMovement(transaction)) {
+		return true;
+	}
+
+	const subtype = normalizedText(transaction.subtype);
+	if (subtype === 'deposit' || subtype === 'contribution') {
+		return true;
+	}
+
+	if (!isBankCashMovement(transaction)) {
+		return false;
+	}
+
+	if (subtype === 'withdrawal') {
+		return false;
+	}
+
+	return contributionDeltaFromAmount(transaction.amount) > 0;
 }
 
 /** Dividends, fees, and internal gain/loss lines are earnings activity — not deposits. */
@@ -173,6 +202,20 @@ function fidelityContributionDelta(transaction: InvestmentTransaction): number {
 	return absAmount(transaction.amount);
 }
 
+/** Prefer Plaid's signed amount; fall back to abs for payroll contribution lines. */
+function fidelityDepositDelta(transaction: InvestmentTransaction): number {
+	const signedDelta = contributionDeltaFromAmount(transaction.amount);
+	if (signedDelta > 0) {
+		return signedDelta;
+	}
+
+	if (normalizedText(transaction.name).includes('contribution')) {
+		return fidelityContributionDelta(transaction);
+	}
+
+	return 0;
+}
+
 /**
  * Decide how a Plaid investment transaction affects tracked contributions.
  * Earnings are always derived as balance minus contributions.
@@ -189,12 +232,8 @@ export function classifyInvestmentTransaction(
 	const label = itemLabel.trim();
 
 	if (label === 'Fidelity') {
-		if (isFidelityEarningsActivity(transaction)) {
-			return { kind: 'ignore', reason: 'earnings activity' };
-		}
-
-		if (isFidelityContributionMovement(transaction)) {
-			return { kind: 'contribution', delta: fidelityContributionDelta(transaction) };
+		if (isFidelityDepositMovement(transaction)) {
+			return { kind: 'contribution', delta: fidelityDepositDelta(transaction) };
 		}
 
 		return { kind: 'ignore', reason: 'in-account investment activity' };
