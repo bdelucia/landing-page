@@ -1,12 +1,19 @@
 # landing-page
 
-A SvelteKit landing page I made for myself.
+A SvelteKit landing page I made for myself. 
+Heavily vibe-coded. 
+Uses my Linux rice palette (find it [here](https://github.com/bdelucia/HyprPanel-Config-Files))
 
-- Hosted on a Raspberry Pi 5 using Docker and Tailscale.
+## More about it:
+- Hosted on a Raspberry Pi 5 using Docker and Tailscale. This is so I don't have to worry about auth or anything.
 - Using Plaid webhooks, RAWG.io, newsAPI, hackernews and SteamGridDB APIs.
-- Gemini search uses [Gemini URL Search](https://addons.mozilla.org/en-US/firefox/addon/gemini-url-search/), instead of a Gemini API key to take advantage of Gemini's Personalization feature.
+- Gemini search uses the [Gemini URL Search](https://addons.mozilla.org/en-US/firefox/addon/gemini-url-search/) extension, instead of a Gemini API key. This takes advantage of Gemini's Personalization feature, as well as making sure I don't have to worry about API token usage/payments.
+- Uses SQLite for the database. Dev database is in /database and prod is on my Raspberry Pi.
+- Investment accounts are fetched with a cron job that runs 4 times a day so free Plaid API usage isn't exceeded.
 
 # Pages
+
+As this is a locally hosted website, I unfortunately can't give out a public link. Here are some screens from the dev server (using fake data points):
 
 ## Homepage
 
