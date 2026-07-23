@@ -104,6 +104,45 @@ async function fetchRowsForItem(
 	return fetchRowsViaBalanceGet(plaid, item, snapshotTime, resolvedItemId);
 }
 
+export type LiveBalanceAccount = {
+	accountId: string;
+	name: string;
+	mask: string | null;
+	type: string | null;
+	subtype: string | null;
+	balanceCurrent: number | null;
+	balanceAvailable: number | null;
+	currency: string | null;
+};
+
+function snapshotRowToLiveAccount(row: SnapshotRow): LiveBalanceAccount {
+	return {
+		accountId: row.accountId,
+		name: row.accountName,
+		mask: row.accountMask,
+		type: row.accountType,
+		subtype: row.accountSubtype,
+		balanceCurrent: row.balanceCurrent,
+		balanceAvailable: row.balanceAvailable,
+		currency: row.isoCurrencyCode ?? row.unofficialCurrencyCode
+	};
+}
+
+/** Live balance fetch for diagnostics — does not write to SQLite. */
+export async function fetchLiveBalancesForItem(
+	plaid: PlaidConfig,
+	item: PlaidLinkedItem
+): Promise<{ itemId: string | null; accounts: LiveBalanceAccount[] }> {
+	const snapshotTime = new Date().toISOString();
+	const itemId = await resolvePlaidItemIdForItem(plaid, item);
+	const rows = await fetchRowsForItem(plaid, item, snapshotTime, itemId);
+
+	return {
+		itemId,
+		accounts: rows.map(snapshotRowToLiveAccount)
+	};
+}
+
 export type RecordPlaidBalanceSnapshotForItemResult = {
 	snapshotTime: string;
 	inserted: number;
@@ -111,6 +150,42 @@ export type RecordPlaidBalanceSnapshotForItemResult = {
 	skipped: boolean;
 	message: string | null;
 };
+
+export async function recordPlaidBalanceSnapshotForLinkedItem(
+	plaid: PlaidConfig,
+	item: PlaidLinkedItem,
+	now: Date = new Date()
+): Promise<RecordPlaidBalanceSnapshotForItemResult> {
+	const snapshotTime = now.toISOString();
+	const itemLabel = resolveItemLabel(item);
+
+	try {
+		const plaidItemId = await resolvePlaidItemIdForItem(plaid, item);
+		const rows = await fetchRowsForItem(plaid, item, snapshotTime, plaidItemId);
+		const inserted = insertSnapshotRows(rows);
+
+		if (inserted > 0) {
+			await syncInvestmentContributions(plaid);
+			recordInvestmentHistoryFromSnapshotRows(rows, plaid);
+		}
+
+		return {
+			snapshotTime,
+			inserted,
+			itemLabel,
+			skipped: false,
+			message: inserted > 0 ? null : 'Plaid returned no accounts for this item'
+		};
+	} catch (error) {
+		return {
+			snapshotTime,
+			inserted: 0,
+			itemLabel,
+			skipped: false,
+			message: formatPlaidApiError(error)
+		};
+	}
+}
 
 export async function recordPlaidBalanceSnapshotForItem(
 	plaidItemId: string,

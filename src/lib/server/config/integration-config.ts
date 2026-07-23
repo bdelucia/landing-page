@@ -7,6 +7,7 @@ import type {
 	RawgConfig,
 	SteamGridDbConfig
 } from '$data/api-config.types';
+import { applyPlaidTokenOverrides } from '$lib/server/plaid/plaid-token-overrides';
 
 function hasValue(value: string | undefined): value is string {
 	return typeof value === 'string' && value.trim().length > 0;
@@ -35,13 +36,17 @@ export function isPlaidConfigured(
 
 /** Linked Items with at least one access token (single `accessToken` or `items[]`). */
 export function getPlaidLinkedItems(plaid: PlaidConfig): PlaidLinkedItem[] {
+	let items: PlaidLinkedItem[];
+
 	if (plaid.items?.length) {
-		return plaid.items.filter((item) => hasValue(item.accessToken));
+		items = plaid.items.filter((item) => hasValue(item.accessToken));
+	} else if (hasValue(plaid.accessToken)) {
+		items = [{ accessToken: plaid.accessToken, itemId: plaid.itemId }];
+	} else {
+		return [];
 	}
-	if (hasValue(plaid.accessToken)) {
-		return [{ accessToken: plaid.accessToken, itemId: plaid.itemId }];
-	}
-	return [];
+
+	return applyPlaidTokenOverrides(items);
 }
 
 /** Plaid transaction endpoints need at least one stored access token */

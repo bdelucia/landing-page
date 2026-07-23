@@ -12,6 +12,10 @@ type Registry = {
 
 let cachedRegistry: Registry | null = null;
 
+export function invalidatePlaidItemRegistry(): void {
+	cachedRegistry = null;
+}
+
 function resolveItemLabel(item: PlaidLinkedItem): string {
 	return item.label?.trim() || 'Account';
 }
